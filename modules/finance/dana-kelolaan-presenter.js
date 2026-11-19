@@ -74,6 +74,7 @@ const DanaKelolaanPresenter = {
       { icon: '🤝', label: 'Dana Titipan', value: this._money(s.titipan), badge: ownBadge('THIRD_PARTY'), detail: ownDetail('THIRD_PARTY'), onClick: { action: 'dashHubNavigateToFeature', args: [DANAKELOLAAN_NAV_TARGETS.self] } },
       { icon: '🏷️', label: 'Titipan dlm Aset Sendiri', value: this._money(s.titipanAset), badge: '', detail: '', onClick: { action: 'dashHubNavigateToFeature', args: [DANAKELOLAAN_NAV_TARGETS.self] } },
       { icon: '📈', label: 'Titipan dlm Investasi Sendiri', value: this._money(s.titipanInvestasi), badge: '', detail: '', onClick: { action: 'dashHubNavigateToFeature', args: [DANAKELOLAAN_NAV_TARGETS.self] } },
+      { icon: '🔨', label: 'Dana Klien Proyek (tertahan)', value: this._money(s.danaProyekKlien || 0), badge: '', detail: '', onClick: { action: 'dashHubNavigateToFeature', args: [DANAKELOLAAN_NAV_TARGETS.self] } },
       { icon: '🧾', label: 'DP Customer', value: this._money(s.dpCustomer), badge: ownBadge('CUSTOMER'), detail: ownDetail('CUSTOMER'), onClick: { action: 'dashHubNavigateToFeature', args: [DANAKELOLAAN_NAV_TARGETS.self] } },
       { icon: '👨‍👩‍👧', label: 'Dana Keluarga', value: this._money(s.keluarga), badge: ownBadge('FAMILY'), detail: ownDetail('FAMILY'), onClick: { action: 'dashHubNavigateToFeature', args: [DANAKELOLAAN_NAV_TARGETS.self] } },
       { icon: '💰', label: 'Total Dana Kelolaan', value: this._money(s.total), cls: 'u-fw700', badge: '', detail: '', onClick: { action: 'dashHubNavigateToFeature', args: [DANAKELOLAAN_NAV_TARGETS.self] } },
@@ -112,6 +113,7 @@ const DanaKelolaanPresenter = {
         <div class="u-flex u-jcb u-fs12 u-mb4"><span>🤝 Dana Titipan</span><span class="u-fw700">${this._money(s.titipan)}</span></div>
         <div class="u-flex u-jcb u-fs12 u-mb4"><span>🏷️ Titipan dlm Aset Sendiri</span><span class="u-fw700">${this._money(s.titipanAset)}</span></div>
         <div class="u-flex u-jcb u-fs12 u-mb4"><span>📈 Titipan dlm Investasi Sendiri</span><span class="u-fw700">${this._money(s.titipanInvestasi)}</span></div>
+        <div class="u-flex u-jcb u-fs12 u-mb4"><span>🔨 Dana Klien Proyek (tertahan)</span><span class="u-fw700">${this._money(s.danaProyekKlien || 0)}</span></div>
         <div class="u-flex u-jcb u-fs12 u-mb4"><span>🧾 DP Customer</span><span class="u-fw700">${this._money(s.dpCustomer)}</span></div>
         <div class="u-flex u-jcb u-fs12"><span>👨‍👩‍👧 Dana Keluarga</span><span class="u-fw700">${this._money(s.keluarga)}</span></div>
       `;
@@ -186,7 +188,7 @@ const DanaKelolaanInsight = {
     const out = [{
       id: 'dana-kelolaan-total',
       icon: '💰',
-      text: `Total Dana Kelolaan (di luar milik sendiri): ${money(s.total)} — Investor ${money(s.investor)}, Titipan ${money(s.titipan)}, DP Customer ${money(s.dpCustomer)}, Keluarga ${money(s.keluarga)}, Titipan dlm Aset Sendiri ${money(s.titipanAset)}, Titipan dlm Investasi Sendiri ${money(s.titipanInvestasi)}.`,
+      text: `Total Dana Kelolaan (di luar milik sendiri): ${money(s.total)} — Investor ${money(s.investor)}, Titipan ${money(s.titipan)}, DP Customer ${money(s.dpCustomer)}, Keluarga ${money(s.keluarga)}, Titipan dlm Aset Sendiri ${money(s.titipanAset)}, Titipan dlm Investasi Sendiri ${money(s.titipanInvestasi)}, Dana Klien Proyek ${money(s.danaProyekKlien || 0)}.`,
     }];
     return out;
   },

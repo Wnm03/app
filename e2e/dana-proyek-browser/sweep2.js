@@ -12,7 +12,7 @@ const h=require('./harness');const seed=require('./seed');
    await p.evaluate(([x,key,rs])=>{window._t=[];const re=new RegExp(rs,'i');const b=[...document.querySelectorAll('#page-'+x+' [data-action]')].filter(b=>b.getBoundingClientRect().width>0&&!re.test(b.getAttribute('data-action')+(b.getAttribute('data-args')||'')+b.innerText)).find(b=>(b.getAttribute('data-action')+' '+(b.getAttribute('data-args')||''))===key);if(b)b.click();},[pg,a,risky]);
    await p.waitForTimeout(100);
    if(errs.length>before)bad.push({a:a.slice(0,60),e:errs.slice(before)});
-   await p.evaluate(x=>{document.querySelectorAll('.overlay.open').forEach(o=>{try{closeModal(o.id);}catch(e){}});if(!document.getElementById('page-'+x).classList.contains('active'))showPage(x);},pg);}
+   await p.evaluate(x=>{document.querySelectorAll('.overlay.open').forEach(o=>{try{closeModal(o.id);}catch(e){void e;}});if(!document.getElementById('page-'+x).classList.contains('active'))showPage(x);},pg);}
   console.log((bad.length?'✗ ':'✓ ')+'sapuan '+pg+': '+acts.length+' kontrol',JSON.stringify(bad.slice(0,3)));
  }
  console.log('errors total:',errs);await H.close();})();

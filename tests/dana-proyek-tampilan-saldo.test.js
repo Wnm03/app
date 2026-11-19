@@ -10,7 +10,7 @@ function mkEl(){const e={id:'',className:'',style:{},textContent:'',children:[],
 function ctx(D,{fisik=1000,pribadi=700,links=[]}={}){
  const doc={_by:{},getElementById(id){return this._by[id]||null;},createElement(){const e=mkEl();Object.defineProperty(e,'id',{get(){return this._id||'';},set(v){this._id=v;doc._by[v]=this;}});return e;}};
  const c={D,document:doc,totalSaldoAkun:()=>fisik,saldoPribadiSafe:()=>pribadi,fmtFull:(n)=>'Rp'+n,sameId:(a,b)=>String(a)===String(b),
-  isAliranKlienSafe:(t)=>!!t.renovDpProjectId,isAccLinkedToAsset:(id)=>links.includes(id)};
+  isAliranKlienSafe:(t)=>!!t.renovDpProjectId,isAliranKlienOnlySafe:(t)=>!!t.renovDpProjectId,isAccLinkedToAsset:(id)=>links.includes(id)};
  vm.createContext(c);
  vm.runInContext(['adaProyekKlienSafe','isAliranKlienSafe','akunPunyaAliranKlienSafe','saldoKlienRingkasSafe','catatanSaldoKlienSafe','akunAliranKlienSetSafe','akunTertautBerisiKlienSafe'].map(n=>n==='isAliranKlienSafe'?'':grab(n)).join('\n'),c);
  return c;

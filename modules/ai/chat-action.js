@@ -16,8 +16,16 @@ let chatInited=false;
 let _pendingChatActions={};
 function chatActionSummary(type,data){
 switch(type){
-case 'add_transaksi':return `${data.type==='income'?'Pemasukan':'Pengeluaran'} ${fmtFull(Number(data.amount)||0)} — ${data.category||'Lainnya'}${data.note?' ('+data.note+')':''}`;
-case 'add_tagihan':return `${data.name||'Tagihan'} — ${fmtFull(Number(data.amount)||0)}, jatuh tempo ${data.nextDue||'-'}`;
+case 'add_transaksi':return `${data.type==='income'?'Pemasukan':'Pengeluaran'} ${fmtFull(Number(data.amount)||0)} — ${data.category||'Lainnya'}${data.note?' ('+data.note+')':''} · akun ${data.accountName||'(pertama)'}${data.ownerName?' · pemilik '+data.ownerName:''}`;
+case 'add_tagihan':return `${data.name||'Tagihan'} — ${fmtFull(Number(data.amount)||0)}, jatuh tempo ${data.nextDue||'-'} · akun ${data.accountName||'(pertama)'}${data.ownerName?' · pemilik '+data.ownerName:''}`;
+case 'add_piutang':return `${data.name||'Peminjam'} — ${fmtFull(Number(data.amount)||0)}${data.date?', '+data.date:''}${data.note?' ('+data.note+')':''}`;
+case 'add_utang':return `${data.name||'Pemberi utang'} — ${fmtFull(Number(data.amount)||0)}${data.cicilanBulanan?', cicilan '+fmtFull(Number(data.cicilanBulanan)||0)+'/bln':''}${data.note?' ('+data.note+')':''}`;
+case 'pay_tagihan':return `${data.name||'Tagihan'}${data.amount?' — '+fmtFull(Number(data.amount)||0):''}${data.date?', '+data.date:''}`;
+case 'pay_piutang':return `${data.name||'Peminjam'} — ${data.amount?fmtFull(Number(data.amount)||0)+' (sebagian)':'lunas penuh'}${data.date?', '+data.date:''}`;
+case 'add_titipan':return `${data.ownerName||data.name||'Pemilik'} — pokok ${fmtFull(Number(data.amount)||0)}${data.note?' ('+data.note+')':''}`;
+case 'add_renov_proyek':return `${data.name||'Proyek'}${data.rab?' — RAB '+fmtFull(Number(data.rab)||0):''}${data.klien?' · klien '+data.klien:''}${data.dana?' · dana '+data.dana:''}`;
+case 'add_renov_item':return `${data.name||'Item'} — ${fmtFull(Number(data.harga)||0)} · proyek ${data.projectName||'-'}`;
+case 'add_stok_cobek':return `${data.productName||'Produk'} +${Number(data.qty)||0}${data.hargaBeli?' @'+fmtFull(Number(data.hargaBeli)||0):''}${data.accountName?' · akun '+data.accountName:' · tanpa catatan kas'}`;
 case 'add_servis':return `${data.item||'Servis'} — ${data.vehicleName||'kendaraan'} — ${fmtFull(Number(data.cost)||0)}`;
 case 'add_target':return `${data.name||'Target'} — target ${fmtFull(Number(data.amount)||0)}`;
 case 'add_catatan_anak':return `"${data.text||''}"`;
@@ -45,32 +53,51 @@ s=s.replace(/'([^'"\\]*)'/g,'"$1"');
 s=s.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g,(m,inner)=>'"'+inner.replace(/\r\n|\r|\n/g,'\\n').replace(/\t/g,'\\t')+'"');
 return s;
 }
-function extractChatAction(reply){
-const m=reply.match(/\[\[ACTION\]\]([\s\S]*?)\[\[\/ACTION\]\]/);
-if(!m)return{text:reply,action:null,actionError:false};
-const text=(reply.slice(0,m.index)+reply.slice(m.index+m[0].length)).trim();
+// S2853: parse SATU isi blok [[ACTION]] (perbaikan JSON longgar + ekstraksi {...}). Return {parsed,actionError}.
+function _parseChatActionBody(body){
 let parsed=null,actionError=false;
 let obj=null;
 try{
-obj=JSON.parse(m[1]);
+obj=JSON.parse(body);
 }catch(e1){
-try{ obj=JSON.parse(_repairLooseJson(m[1])); console.warn('Blok ACTION dari AI awalnya rusak tapi berhasil diperbaiki otomatis:',e1); }
+try{ obj=JSON.parse(_repairLooseJson(body)); console.warn('Blok ACTION dari AI awalnya rusak tapi berhasil diperbaiki otomatis:',e1); }
 catch(e2){
 // Percobaan terakhir: kadang AI menambahkan teks sebelum/sesudah objek JSON
 // di dalam [[ACTION]]...[[/ACTION]] (mis. "Berikut datanya: {...}") — ambil
 // cuma substring dari "{" pertama sampai "}" terakhir, lalu ulangi perbaikan.
 try{
-const first=m[1].indexOf('{'), last=m[1].lastIndexOf('}');
-if(first>=0&&last>first){ obj=JSON.parse(_repairLooseJson(m[1].slice(first,last+1))); console.warn('Blok ACTION dari AI diperbaiki lewat ekstraksi objek {...}:',e2); }
+const first=body.indexOf('{'), last=body.lastIndexOf('}');
+if(first>=0&&last>first){ obj=JSON.parse(_repairLooseJson(body.slice(first,last+1))); console.warn('Blok ACTION dari AI diperbaiki lewat ekstraksi objek {...}:',e2); }
 else throw e2;
 }catch(e3){ console.warn('Gagal parsing blok ACTION dari AI:',e3); actionError=true; }
 }
 }
 if(obj){
-if(typeof obj.type==='string'&&CHAT_ACTION_HANDLERS[obj.type]&&obj.data&&typeof obj.data==='object')parsed=obj;
+if(typeof obj.type==='string'&&Object.prototype.hasOwnProperty.call(CHAT_ACTION_HANDLERS,obj.type)&&obj.data&&typeof obj.data==='object')parsed=obj;
 else actionError=true;
 }
-return{text,action:parsed,actionError};
+return{parsed,actionError};
+}
+const CHAT_ACTION_MAX_PER_REPLY=20;
+// S2853: semua blok [[ACTION]] dalam satu balasan (input banyak data sekaligus). Blok yang rusak/tipe tak dikenal dilewati dan ditandai actionError;
+// lebih dari CHAT_ACTION_MAX_PER_REPLY blok: sisanya diabaikan (tooMany). Blok tak berpenutup dibuang dari teks.
+function extractChatActions(reply){
+const re=/\[\[ACTION\]\]([\s\S]*?)\[\[\/ACTION\]\]/g;
+const actions=[];let actionError=false,tooMany=false,m;
+while((m=re.exec(reply))){
+const r=_parseChatActionBody(m[1]);
+if(r.parsed){if(actions.length<CHAT_ACTION_MAX_PER_REPLY)actions.push(r.parsed);else tooMany=true;}
+else actionError=true;
+}
+const text=reply.replace(re,'').trim();
+return{text,actions,actionError,tooMany};
+}
+function extractChatAction(reply){
+const m=reply.match(/\[\[ACTION\]\]([\s\S]*?)\[\[\/ACTION\]\]/);
+if(!m)return{text:reply,action:null,actionError:false};
+const text=(reply.slice(0,m.index)+reply.slice(m.index+m[0].length)).trim();
+const r=_parseChatActionBody(m[1]);
+return{text,action:r.parsed,actionError:r.actionError};
 }
 function chatActionInnerHTML(actionId,type,data){
 return `<div class="u-fw700 u-mb4">${CHAT_ACTION_LABELS[type]||'Usul Aksi'}</div>

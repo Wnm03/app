@@ -122,18 +122,18 @@ test('FinancialGoalPresenter.render() — 3 kartu semua clickable (u-pointer + d
 
 // --- DanaKelolaanPresenter ------------------------------------------------
 
-test('DanaKelolaanPresenter.render() — 7 kartu semua clickable, onClick ke tab Laporan (danaKelolaanLapCard)', () => {
+test('DanaKelolaanPresenter.render() — 8 kartu semua clickable (S2840: +Dana Klien Proyek), onClick ke tab Laporan (danaKelolaanLapCard)', () => {
   const realEscapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const DanaKelolaan = {
-    summary: () => ({ investor: 100, titipan: 50, titipanAset: 10, titipanInvestasi: 15, dpCustomer: 20, keluarga: 5, total: 200 }),
+    summary: () => ({ investor: 100, titipan: 50, titipanAset: 10, titipanInvestasi: 15, dpCustomer: 20, keluarga: 5, danaProyekKlien: 30, total: 230 }),
   };
   const html = renderToHtml('modules/finance/dana-kelolaan-presenter.js', 'DanaKelolaanPresenter', 'danaKelolaanGrid', { DanaKelolaan, escapeHtml: realEscapeHtml });
   const pointerMatches = html.match(/class="findash-card u-pointer"/g) || [];
-  assert.equal(pointerMatches.length, 7);
+  assert.equal(pointerMatches.length, 8);
   const actionMatches = html.match(/data-action="dashHubNavigateToFeature"/g) || [];
-  assert.equal(actionMatches.length, 7);
+  assert.equal(actionMatches.length, 8);
   const argsMatches = html.match(/data-args="[^"]*danaKelolaanLapCard[^"]*"/g) || [];
-  assert.equal(argsMatches.length, 7);
+  assert.equal(argsMatches.length, 8);
   assert.ok(html.includes('&quot;page&quot;:&quot;keuangan&quot;'));
 });
 

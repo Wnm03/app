@@ -131,8 +131,9 @@ function goalSourceFI(D) {
 // -- sama alasan/pola dgn DebtStrategy.activeDebts() (S455,
 // piutang-utang.js): lunas selalu false & tidak ada jatuhTempo asli, jadi
 // tanpa exclude ini nongol permanen sbg goal card 0% yg gak pernah selesai.
+// S2845: exclude juga "Dana titipan akun" (linkedAccountId, TitipanSync) -- bukan kewajiban/goal (pola S2843 DebtStrategy.activeDebts).
 function goalSourceDebt(D) {
-  return (D.debts || []).filter((d) => (d.nilai || 0) > 0 && !d.linkedAssetId).map((d) => ({
+  return (D.debts || []).filter((d) => (d.nilai || 0) > 0 && !d.linkedAssetId && !d.linkedAccountId).map((d) => ({
     id: `debt:${d.id}`, sourceKind: 'debt', sourceId: d.id,
     name: d.name, emoji: '📕',
     targetAmount: d.nilai, currentAmount: d.lunas ? d.nilai : 0,

@@ -684,6 +684,22 @@ build() {
   // projection (allocated/currentValue/gain = 0, bukan hilang begitu
   // saja) — supaya "Estimasi Belum Teralokasi" bisa dihitung utk owner
   // itu (sesi UI, S485d).
+  // S2844 (temuan uji browser #4): pemilik yang HANYA terdaftar sebagai pemilik akun (D.accounts[].owners, non-SELF) -- punya transaksi/
+  // utang lewat akun itu tapi belum punya Pokok/holding -- sebelumnya tidak tampil di halaman Dana Titipan. Sumber ke-4, append-only:
+  // owner yang sudah ada dari holding/aset/komitmen TIDAK disentuh, dan identitas tidak digabung (key = ownerId apa adanya).
+  if (D && Array.isArray(D.accounts)) {
+    D.accounts.forEach((acc) => {
+      if (!acc || !Array.isArray(acc.owners)) return;
+      acc.owners.forEach((o) => {
+        if (!o || o.isSelf || !o.ownerId || o.ownerId === 'SELF') return;
+        if (!(o.porsi > 0)) return;
+        if (ownersMap.has(o.ownerId)) return;
+        const ownerName = (o.ownerName && String(o.ownerName).trim()) || 'Pemilik dana titipan';
+        ownersMap.set(o.ownerId, { ownerId: o.ownerId, ownerName, allocatedPrincipal: 0, currentValue: 0, gain: 0, holdings: [] });
+      });
+    });
+  }
+
   const commitments = (D && Array.isArray(D.titipanCommitments)) ? D.titipanCommitments : [];
   const commitMap = new Map();
   commitments.forEach((c) => {

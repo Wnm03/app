@@ -85,7 +85,13 @@ test('S2830: dropdown pemilik Tagihan tampil juga utk akun tanpa pemilik (ada op
   assert.match(get('billRenovOwner').innerHTML, /__manage_owners__/);
   get('billAcc').value = 'A';
   ctx.updateBillRenovOwnerVisibility('');
+  // S2844: tanpa Proyek Renovasi, kosong = ikut pemilik akun sumber; dengan proyek tetap "Pilih saat bayar".
+  assert.match(get('billRenovOwner').innerHTML, /Ikut pemilik akun/);
+  get('billRenovProject').value = '7';
+  ctx.updateBillRenovOwnerVisibility('');
   assert.match(get('billRenovOwner').innerHTML, /Pilih saat bayar/);
+  get('billRenovProject').value = '';
+  ctx.updateBillRenovOwnerVisibility('');
   assert.equal(get('billRenovOwner').value, 'o1', 'pemilik tunggal tetap terpilih otomatis');
   get('billAcc').value = '';
   ctx.updateBillRenovOwnerVisibility('');

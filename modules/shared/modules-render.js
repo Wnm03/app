@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2433-dana-titipan-akumulatif-2861';
+const MODULE_RENDER_VERSION='s2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2878';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -722,7 +722,10 @@ const anomalyNote=anomaly?`<div class="u-fs11 u-mt2 u-fw700" style="color:var(--
 // S2638 (rekomendasi P3 kartu): kartu hanya menampilkan MAKS 2 chip (urutan prioritas: status
 // bayar, sisa tenor, porsi bersama, kategori, subkategori, piutang terkait); sisanya pindah ke
 // area detail (chevron ▾) supaya nama tidak terjepit di layar 390 px. Murni tampilan.
-const chipPool=[paidThisPeriodChip,(!isArchived&&b.sisaTenor!=null?`<span class="acc-chip">${b.sisaTenor}x lagi</span>`:''),(b.shared?`<span class="acc-chip">👫 ${b.sharedPct}% dari ${fmt(b.totalAmount)}</span>`:''),(b.category?`<span class="acc-chip">${escapeHtml(String(b.category))}</span>`:''),(b.subcategory?`<span class="acc-chip">${escapeHtml(String(b.subcategory))}</span>`:''),autoPiutangChip].filter(Boolean);
+// S2844: chip pemilik titipan (identitas apa adanya, tidak digabung); tagihan pribadi tidak diberi chip.
+let ownerChip='';
+if(typeof billOwnershipOf==='function'){const _own=billOwnershipOf(b);if(_own&&_own.scope==='titipan')ownerChip=`<span class="acc-chip" style="color:var(--accent3)" title="Dibayar dari dana titipan">🤝 ${escapeHtml(_own.ownerName)}${(typeof billTalanganOwnerForPay==='function'&&billTalanganOwnerForPay(b))?' · ditalangi':''}</span>`;}
+const chipPool=[paidThisPeriodChip,ownerChip,(!isArchived&&b.sisaTenor!=null?`<span class="acc-chip">${b.sisaTenor}x lagi</span>`:''),(b.shared?`<span class="acc-chip">👫 ${b.sharedPct}% dari ${fmt(b.totalAmount)}</span>`:''),(b.category?`<span class="acc-chip">${escapeHtml(String(b.category))}</span>`:''),(b.subcategory?`<span class="acc-chip">${escapeHtml(String(b.subcategory))}</span>`:''),autoPiutangChip].filter(Boolean);
 const chipsVisible=chipPool.slice(0,2).join('');
 const chipsExtra=chipPool.slice(2).join('');
 const extraChipsHtml=chipsExtra?`<div class="bill-chips u-mt4">${chipsExtra}</div>`:'';

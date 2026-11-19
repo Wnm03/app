@@ -211,6 +211,23 @@ sumTitipanInvestasi() {
     .reduce((s, h) => s + (Investment.holdingCost(h) || 0), 0);
 },
 
+// sumDanaProyekKlien() — S2840 (audit proyek -> dana kelolaan): dana klien TERTAHAN pada Proyek Renovasi
+// (DP/termin klien yang belum dibelanjakan/dikembalikan/dicairkan jadi laba). Uang ini fisik ada di akun SELF
+// (jadi TIDAK ikut sumAccounts(): akun SELF tidak dijumlah di sini -> 0 dobel-hitung) tetapi bukan milik sendiri;
+// saldo pribadi/Kekayaan Bersih sudah mengurangkannya, sehingga Dana Kelolaan wajib menampilkannya.
+// Reuse renovDanaTertahanUntukKelolaan() (renovasi.js, 1 SOT; S2841: tanpa DP di akun non-SELF yang SUDAH dihitung di byType(),
+// supaya tidak dobel). Mesin renovasi.js lazy-load: bila belum ada & ada proyek klien,
+// minta muat lewat ensureKlienEngineSafe() (akun.js; render ulang otomatis) dan sementara 0.
+sumDanaProyekKlien() {
+  const projects = (typeof D !== 'undefined' && Array.isArray(D.renovProjects)) ? D.renovProjects : [];
+  if (!projects.some((p) => p && p.dana === 'klien')) return 0;
+  if (typeof renovDanaTertahanUntukKelolaan !== 'function') {
+    if (typeof ensureKlienEngineSafe === 'function') { try { ensureKlienEngineSafe(); } catch (e) { /* mesin gagal dimuat: 0 */ } }
+    return 0;
+  }
+  return projects.reduce((s, p) => s + (p && p.dana === 'klien' ? (renovDanaTertahanUntukKelolaan(p) || 0) : 0), 0);
+},
+
 // listTitipan() — Sesi 459 (rekomendasi #2 dari audit "dana titipan"):
 // daftar RINCI per-entri titipan yang bermuara ke titipanAset/
 // titipanInvestasi di atas (nama pemilik, sumber aset/investasi, nominal,
@@ -274,13 +291,14 @@ summary() {
   const keluarga = this.byType('FAMILY');
   const titipanAset = this.sumTitipanAset();
   const titipanInvestasi = this.sumTitipanInvestasi();
-  const total = investor + titipan + dpCustomer + keluarga + titipanAset + titipanInvestasi;
+  const danaProyekKlien = this.sumDanaProyekKlien();
+  const total = investor + titipan + dpCustomer + keluarga + titipanAset + titipanInvestasi + danaProyekKlien;
   // utangNonSelf (Sesi 255, Ownership Sync Piutang & Utang) — total utang
   // ber-ownership non-SELF, SENGAJA TIDAK ikut `total` di atas (lihat
   // komentar sumDebt()). Field tambahan murni informasional supaya utang
   // yang dikecualikan dari Total Utang tetap terlihat/terlacak di sini.
   const utangNonSelf = this.sumDebt('INVESTOR') + this.sumDebt('THIRD_PARTY') + this.sumDebt('CUSTOMER') + this.sumDebt('FAMILY');
-  return { investor, titipan, dpCustomer, keluarga, titipanAset, titipanInvestasi, utangNonSelf, total };
+  return { investor, titipan, dpCustomer, keluarga, titipanAset, titipanInvestasi, danaProyekKlien, utangNonSelf, total };
 },
 
 };

@@ -8,7 +8,7 @@ const akun=fs.readFileSync('modules/finance/akun.js','utf8');
 const grab=(n)=>{const m=akun.match(new RegExp('function '+n+'\\([^\\n]*\\n'));assert.ok(m,n);return m[0];};
 function ctx(D){
  const c={D,sameId:(a,b)=>String(a)===String(b),isAliranKlien:(t)=>t.type==='income'&&t.renovDpProjectId!=null};
- vm.createContext(c);vm.runInContext(grab('isAliranKlienSafe')+grab('akunPunyaAliranKlienSafe'),c);return c;
+ vm.createContext(c);vm.runInContext(grab('isAliranKlienOnlySafe')+grab('isAliranKlienSafe')+grab('akunPunyaAliranKlienSafe'),c);return c;
 }
 test('akun dengan DP klien terdeteksi; akun lain tidak',()=>{
  const c=ctx({transactions:[{id:1,accountId:'a1',type:'income',amount:10,renovDpProjectId:'p1'},{id:2,accountId:'a2',type:'income',amount:5}]});

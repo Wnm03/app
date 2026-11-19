@@ -476,7 +476,7 @@ if(typeof document==='undefined'||typeof document.createElement!=='function')ret
 const anchor=document.getElementById('lapNetBox')||document.getElementById('lapNet');
 if(!anchor||!anchor.parentNode)return;
 let box=document.getElementById('lapBasisBox');
-const ada=(typeof adaProyekKlienSafe==='function')&&adaProyekKlienSafe();
+const ada=((typeof adaProyekKlienSafe==='function')&&adaProyekKlienSafe())||!!(res&&res.titipanKeluar>0);/* S2845: juga bila ada titipan pemilik lain */
 if(!ada||!res){if(box)box.style.display='none';return;}
 if(!box){
 box=document.createElement('div');box.id='lapBasisBox';box.className='u-mt6';
@@ -488,7 +488,8 @@ box.style.display='';
 const pil=res.basisDipilih;
 box.querySelectorAll('[data-lap-basis]').forEach(b=>b.classList.toggle('active',b.getAttribute('data-lap-basis')===pil));
 const note=document.getElementById('lapBasisNote');if(!note)return;
-const klien='dana klien (DP/termin, pengembalian, belanja dana proyek): masuk '+fmt(res.klienMasuk)+' · keluar '+fmt(res.klienKeluar);
+const _adaK=(typeof adaProyekKlienSafe==='function')&&adaProyekKlienSafe(),_tit=res.titipanKeluar>0?'titipan pemilik lain (keluar '+fmt(res.titipanKeluar)+')':'';
+const klien=(_adaK?'dana klien (DP/termin, pengembalian, belanja dana proyek): masuk '+fmt(res.klienMasuk)+' · keluar '+fmt(res.klienKeluar):'')+(_adaK&&_tit?' dan ':'')+_tit;
 if(res.basisEfektif==='pribadi')note.textContent='👤 Basis pribadi: tidak termasuk '+klien+(res.pencairan>0?'; termasuk pencairan laba '+fmt(res.pencairan):'')+'. Pilih "Arus fisik" untuk semua pergerakan uang.';
 else if(res.alasan)note.textContent='🏦 '+res.alasan+' aktif, jadi total memakai basis fisik (semua pergerakan uang, termasuk '+klien+'). Pencairan laba tidak tampil karena bukan pergerakan fisik.';
 else note.textContent='🏦 Arus fisik: semua pergerakan uang di rekening, termasuk '+klien+'. Pencairan laba tidak tampil karena bukan pergerakan fisik.';
@@ -650,7 +651,7 @@ for(let i=5;i>=0;i--){
 const m=(now.getMonth()-i+12)%12,y=now.getFullYear()+(now.getMonth()-i<0?-1:0);
 const txM=D.transactions.filter(t=>{const d=new Date((typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime()));return d.getMonth()===m&&d.getFullYear()===y;});
 // Langkah 3: grafik 6 bulan ikut basis Laporan (pribadi: tanpa aliran klien + pencairan bulan itu). Tanpa proyek klien atau basis fisik = angka lama.
-const _gPr=(typeof getLapBasis==='function'&&getLapBasis()==='pribadi'&&typeof adaProyekKlienSafe==='function'&&adaProyekKlienSafe());
+const _gPr=(typeof getLapBasis==='function'&&getLapBasis()==='pribadi'&&typeof adaProyekKlienSafe==='function'&&(adaProyekKlienSafe()||(typeof adaAkunBukanPribadiSafe==='function'&&adaAkunBukanPribadiSafe())));/* S2842: basis pribadi juga bila ada akun non-SELF */
 const _gKl=(t)=>_gPr&&typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t);
 bars.push({label:MONTHS[m],inc:txM.filter(t=>t.type==='income'&&!_gKl(t)).reduce((s,t)=>s+t.amount,0)+(_gPr&&typeof pencairanKlienBulanSafe==='function'?pencairanKlienBulanSafe(y+'-'+String(m+1).padStart(2,'0')):0),exp:txM.filter(t=>t.type==='expense'&&!_gKl(t)).reduce((s,t)=>s+t.amount,0)});
 }
@@ -1188,6 +1189,16 @@ setImportType(curImportType,document.querySelector('#importChips .chip-btn'));
 renderSelfTestLastResult();
 }
 
+function renderChatActionAllBubble(ids){
+const arg=escapeHtml(JSON.stringify([JSON.stringify(ids)]));
+return `<div class="chat-bubble ai u-r12" id="chatActionAll_${ids[0]}" style="border:1px solid var(--accent)">
+    <div class="u-fw700 u-mb6">${ids.length} usulan sekaligus</div>
+    <div class="u-flex u-gap8 u-fwrap">
+      <button class="btn btn-primary btn-sm" data-action="confirmAllChatActions" data-args="${arg}">✅ Konfirmasi semua (${ids.length})</button>
+      <button class="btn btn-ghost btn-sm" data-action="cancelAllChatActions" data-args="${arg}">❌ Batal semua</button>
+    </div>
+  </div>`;
+}
 function renderChatActionBubble(actionId,type,data){
 return `<div class="chat-bubble ai u-r12" id="chatAction_${actionId}" style="border:1px solid var(--accent)">${chatActionInnerHTML(actionId,type,data)}</div>`;
 }

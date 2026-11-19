@@ -25,7 +25,7 @@ function fixture({cairkan=0,dana='klien'}={}){
  if(dana==='klien'&&cairkan>0){assert.equal(r.renovTandaiSelesai(p,{semuaBiayaTercatat:true}).ok,true);assert.equal(r.renovAkuiLaba(p,cairkan,{kunci:'a'}).ok,true);assert.equal(r.renovCairkanLaba(p,cairkan,{kunci:'c'}).ok,true);}
  const ctx={D,renovPencairanIncome:r.renovPencairanIncome,renovPencairanBulan:r.renovPencairanBulan,isAliranKlien:r.isAliranKlien};
  vm.createContext(ctx);
- vm.runInContext([grab('isAliranKlienSafe'),grab('pencairanKlienBulanSafe'),grab('pencairanKlienRentangSafe'),grab('_ymdLocal'),block].join('\n'),ctx);
+ vm.runInContext([grab('isAliranKlienOnlySafe'),grab('isAliranKlienSafe'),grab('pencairanKlienBulanSafe'),grab('pencairanKlienRentangSafe'),grab('_ymdLocal'),block].join('\n'),ctx);
  return {D,ctx};
 }
 const from=new Date(NOW.getFullYear(),NOW.getMonth(),1),to=new Date(NOW.getFullYear(),NOW.getMonth()+1,0,23,59,59,999);

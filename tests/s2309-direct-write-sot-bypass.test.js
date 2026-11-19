@@ -24,7 +24,7 @@ test('S2309: Bundle-A mirrors the direct-write hardening', () => {
   assert.doesNotMatch(bundle, /D\.transactions\.push\(\{id:uid\(\),type,amount/);
   assert.doesNotMatch(bundle, /D\.transactions\.push\(\{id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory\(veh\),subcategory:'Bensin'/);
   assert.doesNotMatch(bundle, /D\.transactions\.push\(\{id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory\(veh\),subcategory:'Servis & Oli'/);
-  assert.ok(bundle.includes('FinanceTxSOT.create({id:uid(),type,amount'));
+  assert.ok(bundle.includes('FinanceTxSOT.create({id:txId,type,amount'));
   assert.ok(bundle.includes("FinanceTxSOT.create({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Bensin'"));
   assert.ok(bundle.includes("FinanceTxSOT.create({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli'"));
 });

@@ -406,6 +406,8 @@ if(String(id).startsWith('vbill_')){toast('Tagihan ini belum dibayar');return;}
 if(_blk.length){toast('⛔ Pembelian tidak bisa dihapus: stok sudah terjual/terpakai sebagian — '+_blk.map(b=>b.name+' (stok '+b.stock+', pembelian '+b.qty+')').join(', ')+'. Gunakan retur atau penyesuaian stok.',7000);return;}}
 if(!await askConfirm('Hapus transaksi ini?'))return;
 const t=D.transactions.find(x=>x.id===id);
+// S2851: modul Renovasi lazy -> muat dulu bila transaksi bertaut proyek; gagal = batal (cegah payment/piutang yatim diam-diam)
+if(t&&typeof renovEnsureForTx==='function'&&!(await renovEnsureForTx(t))){toast('⚠️ Modul Renovasi belum termuat; hapus dibatalkan. Coba lagi.');return;}
 // SESI 432 (audit fitur Transfer Antar Akun): transfer_out/transfer_in
 // SEKARANG dibuat berpasangan lewat `transferPairId` (baru, lihat
 // tx-transfer.js saveTransfer()) -- sebelum sesi ini, delTx() cuma
@@ -470,6 +472,7 @@ runTxDeleteCascades(t);
 // `D.transactions` di baris filter di bawah -- TIDAK ada counter manual
 // yang perlu di-decrement di sini (Hard Invariant #21/#22).
 if(t&&t.renovPaymentId!=null&&typeof Renov!=='undefined'&&Renov&&typeof Renov.onTalanganTxDeleted==='function'){Renov.onTalanganTxDeleted(t);}
+if(t&&t.talanganPelunasanOwnerId&&typeof talanganPayoffTxDeleted==='function'){talanganPayoffTxDeleted(t);}// S2849: hapus pemasukan pelunasan talangan langsung -> piutang menyesuaikan
 if(t&&t.titipanLinkId&&typeof removeUnpaidTitipanTalanganPiutangForTx==='function'){
 removeUnpaidTitipanTalanganPiutangForTx(t.id);
 }

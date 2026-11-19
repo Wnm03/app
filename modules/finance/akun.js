@@ -408,9 +408,21 @@ function ensureKlienEngineSafe(){if(_klienEnginePending)return _klienEnginePendi
 function siapkanMesinKlienSafe(maxMs){try{if(typeof saldoPribadi==='function'||!adaProyekKlienSafe())return Promise.resolve(true);const p=ensureKlienEngineSafe();if(!p)return Promise.resolve(false);const lim=Number(maxMs)>0?Number(maxMs):1500;return new Promise(function(res){const t=setTimeout(function(){res(false);},lim);p.then(function(ok){clearTimeout(t);res(ok===true);},function(){clearTimeout(t);res(false);});});}catch(_e){return Promise.resolve(false);}}
 function saldoPribadiSafe(){if(typeof saldoPribadi!=='function')ensureKlienEngineSafe();return (typeof saldoPribadi==='function')?saldoPribadi():totalSaldoAkun();}
 // Predikat satu-pintu aliran klien (DP/termin, pengembalian, belanja dana proyek). TIDAK memakai hitungKas.
-function isAliranKlienSafe(t){if(typeof isAliranKlien!=='function'){ensureKlienEngineSafe();return false;}return isAliranKlien(t);}
+// S2842: dua predikat. isAliranKlienOnlySafe = aliran dana klien MURNI (dipakai badge/label 'dana klien').
+function isAliranKlienOnlySafe(t){if(typeof isAliranKlien!=='function'){ensureKlienEngineSafe();return false;}return isAliranKlien(t);}
+// S2842: isAliranKlienSafe = BUKAN aliran pribadi = aliran klien ATAU transaksi di akun non-SELF (investor/titipan/keluarga penuh; predikat sama dgn totalSaldoAkun() -> isAccOwnershipSelf). Dipakai SEMUA agregat pemasukan/pengeluaran pribadi.
+// S2845: transaksi yang dipotong dari porsi pemilik NON-SELF (deductionOwnerId; mis. tagihan titipan dibayar dari akun SELF) BUKAN pengeluaran pribadi. Pemilik SELF/stale-tanpa-data-akun: SELF -> pribadi.
+var _dedOwnCache=null;
+function _dedOwnersOfSafe(accId){if(!_dedOwnCache){_dedOwnCache=new Map();Promise.resolve().then(()=>{_dedOwnCache=null;});}const k=String(accId);if(_dedOwnCache.has(k))return _dedOwnCache.get(k);let owners=[];try{if(typeof renovAccountOwners==='function')owners=renovAccountOwners(accId)||[];else if(typeof getAccOwnersRaw==='function'){const r=getAccOwnersRaw(accId);if(r&&Array.isArray(r.owners))owners=r.owners;}}catch(_e){owners=[];}_dedOwnCache.set(k,owners);return owners;}
+function isTxDeductionNonSelfSafe(t){const o=t&&t.deductionOwnerId;if(o==null||o===''||String(o)==='SELF')return false;const hit=_dedOwnersOfSafe(t.accountId).find(x=>x&&String(x.ownerId)===String(o));return !(hit&&hit.isSelf);}
+// S2845: ada transaksi titipan pemilik lain? + total pengeluaran titipan bulan tertentu (catatan Hub; baca-saja).
+function adaTxTitipanPemilikSafe(){return (D.transactions||[]).some(t=>t&&t.type==='expense'&&isTxDeductionNonSelfSafe(t));}
+function titipanPemilikBulanSafe(y,m0){let s=0;(D.transactions||[]).forEach(t=>{if(!t||t.type!=='expense'||t.hitungKas===false||!isTxDeductionNonSelfSafe(t))return;const d=new Date(t.date);if(d.getFullYear()!==y||d.getMonth()!==m0)return;s+=Number(t.amount)||0;});return s;}
+function catatanHubTitipanSafe(anchor){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const d=new Date(),v=titipanPemilikBulanSafe(d.getFullYear(),d.getMonth());let n=document.getElementById('dashHubHeroTitipan');if(!(v>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id='dashHubHeroTitipan';n.style.cssText='font-size:11px;opacity:.8;margin-top:2px';anchor.parentNode.appendChild(n);}n.textContent='Pengeluaran bulan ini belum termasuk titipan pemilik lain '+fmtFull(v);}
+function catatanHubTalanganSafe(anchor){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=(typeof talanganBelumDiganti==='function')?talanganBelumDiganti():null;let n=document.getElementById('dashHubHeroTalangan');if(!r||!(r.total>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id='dashHubHeroTalangan';n.style.cssText='font-size:11px;opacity:.8;margin-top:2px';anchor.parentNode.appendChild(n);}n.textContent='Talangan belum diganti pemilik titipan '+fmtFull(r.total)+(r.owners.length>1?' ('+r.owners.map(o=>o.ownerName+' '+fmtFull(o.amount)).join(', ')+')':'');}
+function isAliranKlienSafe(t){if(typeof isAliranKlien!=='function'){ensureKlienEngineSafe();}else if(isAliranKlien(t))return true;if(t&&t.talanganPelunasanOwnerId)return true;/* S2848: pelunasan talangan = bukan pendapatan pribadi */if(typeof isTxDeductionNonSelfSafe==='function'&&isTxDeductionNonSelfSafe(t))return true;if(t&&t.accountId!=null&&t.accountId!==''&&typeof isAccOwnershipSelf==='function'&&typeof sameId==='function'){const a=(D.accounts||[]).find(x=>x&&sameId(x.id,t.accountId));if(a&&!isAccOwnershipSelf(a))return true;}return false;}
 // Langkah 5 (U-10): akun yang memuat aliran dana klien (DP/termin, pengembalian, belanja dana proyek) tidak boleh ditautkan ke aset/holding: akun tertaut keluar dari saldo pribadi, sementara dana tertahan tetap dikurangkan.
-function akunPunyaAliranKlienSafe(accId){if(accId==null||accId==='')return false;return (D.transactions||[]).some(t=>t&&sameId(t.accountId,accId)&&isAliranKlienSafe(t));}
+function akunPunyaAliranKlienSafe(accId){if(accId==null||accId==='')return false;return (D.transactions||[]).some(t=>t&&sameId(t.accountId,accId)&&isAliranKlienOnlySafe(t));}
 // Tampilan saldo (audit dana proyek): rincian fisik / dana klien tertahan / pribadi. null bila tak ada proyek klien. Hanya BACA; tidak mengubah totalSaldoAkun().
 function saldoKlienRingkasSafe(){if(!adaProyekKlienSafe())return null;try{const fisik=totalSaldoAkun(),pribadi=saldoPribadiSafe();return{fisik,pribadi,tertahan:fisik-pribadi};}catch(e){return null;}}
 // Catatan kecil di bawah total saldo. Dibuat/diperbarui/dihapus dinamis (tanpa ubah HTML). luarInduk=true: sisipkan setelah induk anchor (anchor ada di baris flex).
@@ -418,7 +430,7 @@ function saldoKlienRingkasSafe(){if(!adaProyekKlienSafe())return null;try{const 
 function catatanHubSaldoKlienSafe(anchor){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=saldoKlienRingkasSafe();let n=document.getElementById('dashHubHeroKlien');if(!r||!(r.tertahan>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id='dashHubHeroKlien';n.style.cssText='font-size:11px;opacity:.8;margin-top:2px';anchor.parentNode.appendChild(n);}n.textContent='Belum termasuk dana klien tertahan '+fmtFull(r.tertahan)+' · Saldo fisik '+fmtFull(r.fisik);}
 function catatanSaldoKlienSafe(anchor,id,luarInduk){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=saldoKlienRingkasSafe();let n=document.getElementById(id);if(!r||!(r.tertahan>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id=id;n.className='u-fs11 u-t2';n.style.marginTop='4px';if(luarInduk&&anchor.parentNode.parentNode&&typeof anchor.parentNode.parentNode.insertBefore==='function')anchor.parentNode.parentNode.insertBefore(n,anchor.parentNode.nextSibling);else anchor.parentNode.appendChild(n);}n.textContent='Termasuk dana klien tertahan '+fmtFull(r.tertahan)+' · Saldo pribadi '+fmtFull(r.pribadi);}
 // Set id akun (string) yang memuat aliran dana klien; satu pass.
-function akunAliranKlienSetSafe(){const s=new Set();if(!adaProyekKlienSafe())return s;(D.transactions||[]).forEach(t=>{if(t&&t.accountId!=null&&t.accountId!==''&&isAliranKlienSafe(t))s.add(String(t.accountId));});return s;}
+function akunAliranKlienSetSafe(){const s=new Set();if(!adaProyekKlienSafe())return s;(D.transactions||[]).forEach(t=>{if(t&&t.accountId!=null&&t.accountId!==''&&isAliranKlienOnlySafe(t))s.add(String(t.accountId));});return s;}
 // Akun tertaut aset/holding yang memuat dana klien (kasus data lama). Hanya BACA.
 function akunTertautBerisiKlienSafe(){const s=akunAliranKlienSetSafe();if(!s.size||typeof isAccLinkedToAsset!=='function')return[];return(D.accounts||[]).filter(a=>a&&s.has(String(a.id))&&isAccLinkedToAsset(a.id)).map(a=>({accountId:a.id,nama:a.name}));}
 // Fase 5: income pribadi dari pencairan laba proyek klien (entri ledger, bukan transaksi). ym='YYYY-MM'. Tanpa proyek klien -> 0.
@@ -430,18 +442,19 @@ function _ymdLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart
 let _lapBasis='pribadi';
 function getLapBasis(){return _lapBasis;}
 function setLapBasis(b){_lapBasis=(b==='fisik')?'fisik':'pribadi';return _lapBasis;}
+function adaAkunBukanPribadiSafe(){return (typeof isAccOwnershipSelf==='function'&&(D.accounts||[]).some(a=>a&&!isAccOwnershipSelf(a)))||adaTxTitipanPemilikSafe();}/* S2845: + transaksi titipan pemilik lain */
 function adaProyekKlienSafe(){return Array.isArray(D.renovProjects)&&D.renovProjects.some(p=>p&&p.dana==='klien');}
 // txs = transaksi Laporan yang sudah lolos filter; f = getLaporanFilters(); from/to = Date. Tanpa proyek klien -> pribadi == fisik (angka identik).
 function laporanTotalsSafe(txs,f,from,to,basis){
 const list=Array.isArray(txs)?txs:[],flt=f||{},pick=(basis==='fisik')?'fisik':'pribadi';
 const on=(v)=>!!(v&&v!=='semua');
-let incF=0,expF=0,incP=0,expP=0,kIn=0,kOut=0;
+let incF=0,expF=0,incP=0,expP=0,kIn=0,kOut=0,tOut=0;
 const pribadiTx=[];
 list.forEach(t=>{
-const klien=isAliranKlienSafe(t);
-if(t.type==='income'){incF+=t.amount;if(klien)kIn+=t.amount;else incP+=t.amount;}
-else if(t.type==='expense'){expF+=t.amount;if(klien)kOut+=t.amount;else expP+=t.amount;}
-if(!klien)pribadiTx.push(t);
+const excl=isAliranKlienSafe(t),klien=(typeof isAliranKlienOnlySafe==='function')?isAliranKlienOnlySafe(t):excl;/* S2842: excl = klien ATAU akun non-SELF; klien murni utk label */
+if(t.type==='income'){incF+=t.amount;if(klien)kIn+=t.amount;if(!excl)incP+=t.amount;}
+else if(t.type==='expense'){expF+=t.amount;if(klien)kOut+=t.amount;else if(excl&&isTxDeductionNonSelfSafe(t))tOut+=t.amount;if(!excl)expP+=t.amount;}
+if(!excl)pribadiTx.push(t);
 });
 let efektif=pick,alasan='';
 if(pick==='pribadi'){
@@ -456,7 +469,7 @@ const sempit=on(flt.kat)||on(flt.sub)||on(flt.method)||on(flt.classification)||o
 if(!sempit&&from&&to&&typeof from.getTime==='function'&&typeof to.getTime==='function'&&!Number.isNaN(from.getTime())&&!Number.isNaN(to.getTime()))pencairan=pencairanKlienRentangSafe(_ymdLocal(from),_ymdLocal(to));
 }
 const pr=efektif==='pribadi';
-return{inc:pr?incP+pencairan:incF,exp:pr?expP:expF,incFisik:incF,expFisik:expF,pencairan,klienMasuk:kIn,klienKeluar:kOut,basisDipilih:pick,basisEfektif:efektif,alasan,txsDipakai:pr?pribadiTx:list};
+return{inc:pr?incP+pencairan:incF,exp:pr?expP:expF,incFisik:incF,expFisik:expF,pencairan,klienMasuk:kIn,klienKeluar:kOut,titipanKeluar:tOut,basisDipilih:pick,basisEfektif:efektif,alasan,txsDipakai:pr?pribadiTx:list};
 }
 function _ymOf(y,m0){return y+'-'+String(m0+1).padStart(2,'0');}
 // S2830: total saldo PROYEKSI (aktual + transaksi bertanggal setelah hari ini), filter akun sama persis dgn totalSaldoAkun().

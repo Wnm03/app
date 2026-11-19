@@ -231,7 +231,7 @@ const FinanceDashboard = {
       label: 'Kekayaan Bersih',
       value: (net < 0 ? '-' : '') + money(Math.abs(net)),
       cls: net < 0 ? 'red' : 'green',
-      sub: `Saldo ${money(saldo)} · Utang ${money(debt)}`,
+      sub: `Saldo ${(saldo < 0 ? '-' : '') + money(Math.abs(saldo))} · Utang ${money(debt)}`, // S2844: saldo negatif tampil dgn tanda minus (fmt() memakai nilai mutlak)
       onClick,
     };
   },

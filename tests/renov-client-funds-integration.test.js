@@ -45,7 +45,8 @@ test('T1: hapus transaksi membersihkan piutang belum lunas, mempertahankan yang 
 });
 test('Backup/restore: klasifikasi, riwayat, arsip, sumberDana, piutang identik setelah round-trip',()=>{
  const {p,D}=fixture('talangan-tagih');const c=load(D);
- c.renovClassifyProject(p,'pribadi','x');c.renovClassifyProject(p,'klien','x');p.status='arsip';
+ const _tx=D.transactions;D.transactions=_tx.filter(t=>!t.renovDpProjectId&&!t.renovRefundProjectId);/* S2840: klien->pribadi ditolak bila ada DP/refund; ganti klasifikasi dites tanpa aliran klien */
+ c.renovClassifyProject(p,'pribadi','x');c.renovClassifyProject(p,'klien','x');D.transactions=_tx;p.status='arsip';
  c.renovEnsureTalanganPiutang(p,p.items[0],p.items[0].payments[0]);
  const copy=JSON.parse(JSON.stringify({renovProjects:D.renovProjects,piutang:D.piutang,transactions:D.transactions}));
  const D2={...copy,accounts:acc};const c2=load(D2);

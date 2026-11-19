@@ -999,6 +999,9 @@ const DanaTitipanPortfolioPresenter = {
     const sudahDialokasikan = Number(principalAmountTotal) || 0;
     const hasPoolUI = (typeof DanaTitipanPoolUI !== 'undefined');
     const wrapOpen = '<div class="titipan-pool-summary titipan-card u-mb8">';
+    // S2844 (temuan uji browser #9): "Sudah Dialokasikan" (jumlah Pokok yang dicatat per pemilik) berdampingan dgn "Total Teralokasi"
+    // (bagian yang sudah masuk instrumen) tampak bertentangan -- tambahkan 1 baris penjelas, 0 label/angka lama diubah.
+    const hint = '<div class="u-fs10 u-t2 u-mt4">ℹ️ "Sudah Dialokasikan" = total Pokok yang dicatat per pemilik. "Total Teralokasi" di bawah = bagian yang sudah masuk ke instrumen.</div>';
 
     if (status === 'NOT_MIGRATED') {
       const btn = hasPoolUI ? '<button type="button" class="btn btn-ghost btn-full btn-sm u-mt8" data-action="DanaTitipanPoolUI.openSetSaldoAwal">Set Saldo Awal Dana Titipan</button>' : '';
@@ -1006,6 +1009,7 @@ const DanaTitipanPortfolioPresenter = {
         <div class="titipan-card-hero"><span class="titipan-pool-lbl">👥 Sudah Dialokasikan</span><span class="titipan-pool-amt">${this._money(sudahDialokasikan)}</span></div>
         <div class="titipan-pool-row"><span class="u-t2">💰 Dana Titipan Masuk</span><span class="u-fw700">Belum diset</span></div>
         <div class="u-fs10 u-t2 u-mt4">📋 Status: Data lama / belum dimigrasikan</div>
+        ${hint}
         ${btn}
       </div>`;
     }
@@ -1019,6 +1023,7 @@ const DanaTitipanPortfolioPresenter = {
         <div class="titipan-pool-row"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
         <div class="titipan-pool-row"><span class="u-t2">🔴 Alokasi melebihi pool</span><span class="titipan-over-badge red">${this._money(lebih)}</span></div>
         <div class="titipan-pool-row"><span class="u-t2">Belum Dialokasikan</span><span class="u-fw700">${this._money(0)}</span></div>
+        ${hint}
         ${btn}
       </div>`;
     }
@@ -1029,6 +1034,7 @@ const DanaTitipanPortfolioPresenter = {
       <div class="titipan-card-hero"><span class="titipan-pool-lbl">💰 Dana Titipan Masuk</span><span class="titipan-pool-amt">${this._money(masuk)}</span></div>
       <div class="titipan-pool-row"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
       <div class="titipan-pool-row"><span class="u-t2">🟢 Belum Dialokasikan</span><span class="u-fw700 green">${this._money(sisa)}</span></div>
+      ${hint}
       ${btn}
     </div>`;
   },

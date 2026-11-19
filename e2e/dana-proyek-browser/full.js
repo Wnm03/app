@@ -1,3 +1,4 @@
+/* global mIncome, mExpense, mNet, lapAccTotal, kbSaldoAkun, kbNetWorth -- id elemen DOM (window.<id>) dipakai di page.evaluate */
 const h=require('./harness');const seed=require('./seed');const fs=require('fs');
 const SHOTS=process.env.SHOTS,TAG=process.env.TAG||'hp',MODE=process.env.MODE||'client';
 const vp=TAG==='desktop'?{width:1280,height:720}:TAG==='hp360'?{width:360,height:800}:TAG==='hp412'?{width:412,height:915}:{width:390,height:844};
@@ -153,7 +154,7 @@ const rp=s=>String(s).replace(/[^\d]/g,'');
     await sleep(120);n++;
     const tt=(r.t||[]).filter(m=>/belum berfungsi|tidak dikenal|undefined|NaN|gagal/i.test(m));
     if(r.err||tt.length||errs.length>before)bad.push({a:acts[i].slice(0,60),r:r.err||tt,e:errs.slice(before)});
-    await ev(()=>{document.querySelectorAll('.overlay.open').forEach(o=>{try{closeModal(o.id);}catch(e){}});});
+    await ev(()=>{document.querySelectorAll('.overlay.open').forEach(o=>{try{closeModal(o.id);}catch(e){void e;}});});
     await ev(([x])=>{if(!document.getElementById('page-'+x).classList.contains('active'))showPage(x);},[pg]);
    }
    ck('L sapuan tombol halaman '+pg+': '+n+' kontrol diklik, 0 error/toast rusak',bad.length===0,bad.slice(0,4));

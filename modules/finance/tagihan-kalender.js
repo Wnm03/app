@@ -487,7 +487,7 @@ sharedOtherName:shared&&sharedOtherNameEl?sharedOtherNameEl.value.trim():'',
 sharedAutoPiutang:!!(shared&&sharedAutoPiutangEl&&sharedAutoPiutangEl.checked),
 // S2822: tautan Proyek Renovasi + penanggung ('' = lepas tautan). Pemilik kosong utk akun multi-pemilik -> ditanya saat bayar.
 renovProjectLinkId:(document.getElementById('billRenovProject')&&document.getElementById('billRenovProject').value)||'',
-deductionOwnerId:((document.getElementById('billRenovProject')&&document.getElementById('billRenovProject').value)&&document.getElementById('billRenovOwner')&&document.getElementById('billRenovOwner').value)||'',
+deductionOwnerId:(typeof billOwnerIdFromForm==='function'?billOwnerIdFromForm():''),
 // S2825: item RAB yang diisi pembayaran bill ('' = buat item baru otomatis seperti sebelumnya)
 renovItemLinkId:((document.getElementById('billRenovProject')&&document.getElementById('billRenovProject').value)&&document.getElementById('billRenovItem')&&document.getElementById('billRenovItem').value)||''
 };
@@ -1036,12 +1036,13 @@ payDate=val;
 // S2822: bill yang ditautkan ke Proyek Renovasi -> tentukan pemilik/penanggung akun SEBELUM mutasi apa pun
 // (akun titipan/multi-pemilik). Batal memilih = pembayaran dibatalkan utuh, bukan tercatat tanpa penanggung.
 const _renovBillProject=(b.renovProjectLinkId&&Array.isArray(D.renovProjects))?D.renovProjects.find(x=>sameId(x.id,b.renovProjectLinkId)):null;
-let _renovBillOwnerId='';
-if(_renovBillProject&&typeof resolveRenovBillOwner==='function'){
+let _renovBillOwnerId='';const _talProj=(_renovBillProject&&typeof billRenovTalanganMeta==='function')?billRenovTalanganMeta(b,_renovBillProject):null;// S2850: proyek non-klien + pemilik tersimpan bukan pemilik akun = talangan, tanpa dialog pemilik
+if(_renovBillProject&&!_talProj&&typeof resolveRenovBillOwner==='function'){
 const _o=await resolveRenovBillOwner(b,b.accountId||D.accounts[0]?.id||'');
 if(_o===null){toast(resolveRenovBillOwner._managing?'ℹ️ Atur pemilik akun dulu, lalu tekan Bayar lagi':'⚠️ Pembayaran dibatalkan — pilih pemilik/penanggung akun dulu');return;}
 _renovBillOwnerId=_o;
 }
+if(!_renovBillProject&&typeof billStoredOwnerForPay==='function'){const _so=billStoredOwnerForPay(b);if(_so)_renovBillOwnerId=_so;}const _talMeta=_talProj||((!_renovBillProject&&!_renovBillOwnerId&&typeof billTalanganPayMeta==='function')?billTalanganPayMeta(b):null);// S2844 pemilik tersimpan (tx-renov.js); S2848 bukan pemilik akun sumber = talangan (piutang otomatis)
 const _payTxId=uid();
 // billPrevNextDue (audit s327): snapshot nextDue SEBELUM dimajukan oleh advanceBillNextDue()/
 // logic kind-specific di bawah -- dipakai revertBillFromDeletedTx() utk mengembalikan nextDue
@@ -1064,9 +1065,9 @@ if(_dbtSnap)debtNilaiBefore=_dbtSnap.nilai||0;
 const _paymentAtomic=FinanceCrossEntityAtomic.begin(['transactions','bills','billsArchive','debts','piutang','renovProjects']);
 let _paymentAtomicCommitted=false;
 try{
-FinanceTxSOT.create({id:_payTxId,type:'expense',amount:payAmount,category:b.category||(_renovBillProject&&typeof renovBillDefaultCategory==='function'&&renovBillDefaultCategory())||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue,debtNilaiBefore,...(_renovBillProject?{renovProjectLinkId:_renovBillProject.id}:{}),...(_renovBillOwnerId?{deductionOwnerId:_renovBillOwnerId}:{})});
+FinanceTxSOT.create({id:_payTxId,type:'expense',amount:payAmount,category:b.category||(_renovBillProject&&typeof renovBillDefaultCategory==='function'&&renovBillDefaultCategory())||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue,debtNilaiBefore,...(_renovBillProject?{renovProjectLinkId:_renovBillProject.id}:{}),...(_renovBillOwnerId?{deductionOwnerId:_renovBillOwnerId}:{}),...(_talMeta||{})});
 // S2822: tautkan pembayaran ke item Proyek Renovasi (item.payments) -- ikut rollback atomik ('renovProjects' di snapshot).
-if(_renovBillProject&&typeof applyRenovBillPayment==='function')applyRenovBillPayment(b,{id:_payTxId,amount:payAmount,date:payDate,accountId:b.accountId||D.accounts[0]?.id||'',label:b.kind==='cicilan'?(label.trim().replace(/^\(|\)$/g,'')||'Cicilan'):(b.kind==='utang'?'Pembayaran utang':'Tagihan')});
+if(_renovBillProject&&typeof applyRenovBillPayment==='function')applyRenovBillPayment(b,{id:_payTxId,amount:payAmount,date:payDate,accountId:b.accountId||D.accounts[0]?.id||'',label:b.kind==='cicilan'?(label.trim().replace(/^\(|\)$/g,'')||'Cicilan'):(b.kind==='utang'?'Pembayaran utang':'Tagihan')});if(_talMeta&&typeof billEnsureTalanganPiutang==='function')billEnsureTalanganPiutang(_payTxId);// S2848
 // Ditanggung Bersama + auto-piutang (Sesi 341) -- lihat komentar helper di
 // piutang-utang.js. Dipanggil di sini (SETELAH transaksi pembayaran dibuat,
 // SEBELUM cabang kind-specific di bawah) supaya berlaku utk SEMUA jenis bill
@@ -1094,7 +1095,7 @@ BillDebtPiutangCanonicalWriter.removeById('bills',id);
 _paymentAtomic.commit();
 _paymentAtomicCommitted=true;
 save();refreshBillEverywhere();renderDebtList();renderKekayaanBersih();hitungZakatMaal();
-toast('🎉 Utang '+dbt.name+' LUNAS!');return;
+toast('🎉 Utang '+dbt.name+' LUNAS!'+(typeof billTalanganNote==='function'?billTalanganNote(_payTxId):''));return;
 }
 }
 }
@@ -1112,7 +1113,7 @@ BillDebtPiutangCanonicalWriter.removeById('bills',id);
 _paymentAtomic.commit();
 _paymentAtomicCommitted=true;
 save();refreshBillEverywhere();renderKekayaanBersih();hitungZakatMaal();
-toast('🎉 Cicilan '+b.name+' LUNAS!');return;
+toast('🎉 Cicilan '+b.name+' LUNAS!'+(typeof billTalanganNote==='function'?billTalanganNote(_payTxId):''));return;
 }
 }
 if(b.freq!=='bulanan'&&b.freq!=='mingguan'&&b.freq!=='tahunan'){
@@ -1126,7 +1127,7 @@ BillDebtPiutangCanonicalWriter.removeById('bills',id);
 _paymentAtomic.commit();
 _paymentAtomicCommitted=true;
 save();refreshBillEverywhere();renderKekayaanBersih();hitungZakatMaal();
-toast('✅ Tagihan selesai & tercatat');return;
+toast('✅ Tagihan selesai & tercatat'+(typeof billTalanganNote==='function'?billTalanganNote(_payTxId):''));return;
 }
 const d=advanceBillNextDue(b.nextDue,b.freq);
 BillDebtPiutangCanonicalWriter.updateById('bills',b.id,b0=>{b0.nextDue=(typeof localISO==='function'?localISO(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')));});
@@ -1143,7 +1144,7 @@ save();refreshBillEverywhere();
 if(b.kind==='utang')renderDebtList();
 renderKekayaanBersih();hitungZakatMaal();
 const sisaMsg=b.sisaTenor!=null?` Sisa ${b.sisaTenor}x lagi.`:'';
-toast('✅ Dibayar & dijadwalkan ulang.'+sisaMsg);
+toast('✅ Dibayar & dijadwalkan ulang.'+sisaMsg+(typeof billTalanganNote==='function'?billTalanganNote(_payTxId):''));
 }catch(_paymentAtomicErr){
   if(_paymentAtomicCommitted&&typeof _paymentAtomic.rollbackAfterCommit==='function')_paymentAtomic.rollbackAfterCommit();
   else _paymentAtomic.rollback();
@@ -1561,7 +1562,7 @@ const s=getBillStats(billStatMonth,billStatYear);
 const mt=document.getElementById(prefix+'MonthTotal'); if(mt)mt.textContent=fmt(s.monthTotal);
 const sc=document.getElementById(prefix+'SoonCount'); if(sc)sc.textContent=s.soonCount;
 const os=document.getElementById(prefix+'Outstanding'); if(os)os.textContent=fmt(s.outstanding);
-const ml=document.getElementById(prefix+'MonthLabel'); if(ml)ml.textContent=MONTHS_FULL[billStatMonth]+' '+billStatYear;
+const ml=document.getElementById(prefix+'MonthLabel'); if(ml)ml.textContent=MONTHS_FULL[billStatMonth]+' '+billStatYear; if(typeof updateBillOwnershipCard==='function')updateBillOwnershipCard(prefix);
 }
 // getBillAnomalyInfo — dipakai renderBillList() utk kasih badge peringatan "⚠️ Naik X% dari
 // biasanya" di tagihan yang nominal terbarunya (b.amount, dipakai sbg preset saat markBillPaid())

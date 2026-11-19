@@ -507,6 +507,8 @@ function preflightRequiredMinifier() {
   console.log('✓ Build preflight: esbuild + native runtime siap untuk required minification');
 }
 function main() {
+  // S2845: terapkan DELETE-FILES.txt otomatis (file sisa ZIP yang sudah retired tidak boleh ikut build/tes).
+  try { const r = require('./apply-delete-manifest').apply(); if (r.removed.length) console.log('✓ DELETE-FILES.txt diterapkan: ' + r.removed.join(', ')); } catch (e) { console.warn('⚠ apply-delete-manifest dilewati: ' + e.message); }
   preflightPatchManifest();
   preflightRequiredMinifier();
   execSync('node scripts/generate-service-master-data.js', { cwd: ROOT, stdio: 'inherit' });

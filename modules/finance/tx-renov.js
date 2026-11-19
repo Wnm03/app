@@ -388,7 +388,12 @@ updateBillRenovItemOptions(itemId||'');
 updateBillRenovOwnerVisibility(ownerId||'');
 }
 // S2825: pilih item RAB yang diisi pembayaran bill (opsional). Hanya item rencana yang belum lunas & bukan item bentukan bill lain.
+// S2844: ganti Proyek Renovasi -> placeholder dropdown pemilik ikut berubah (Ikut pemilik akun / Pilih saat bayar).
 function updateBillRenovItemOptions(keepItemId){
+_updateBillRenovItemOptionsCore(keepItemId);
+if(typeof keepItemId!=='string'&&typeof updateBillRenovOwnerVisibility==='function')updateBillRenovOwnerVisibility();
+}
+function _updateBillRenovItemOptionsCore(keepItemId){
 const wrap=document.getElementById('billRenovItemWrap'),sel=document.getElementById('billRenovItem');if(!wrap||!sel)return;
 const prev=(typeof keepItemId==='string')?keepItemId:sel.value;
 const projSel=document.getElementById('billRenovProject');
@@ -399,6 +404,27 @@ wrap.style.display='block';
 sel.innerHTML='<option value="">— Buat item baru otomatis —</option>'+items.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.name||'Item')}</option>`).join('');
 sel.value=items.some(x=>sameId(x.id,prev))?String(prev):'';
 }
+// S2850 item 4 — pilihan pemilik "ditalangi" untuk dropdown pemilik form Tagihan: pemilik Dana Titipan yang TIDAK punya porsi di akun sumber (mis. Cash).
+// Akun yang memuat porsinya (mis. BRI) tidak menandainya (itu potong porsi). Proyek klien tidak menawarkannya (perilaku lama). Return [{ownerId,ownerName}].
+// S2852: hanya pemilik yang punya kartu Dana Titipan nyata (holding/aset berporsi atau pokok tercatat = DanaTitipanPortfolioAPI.build().owners) yang ditawarkan;
+// nama yang hanya ada di registri pemilik tidak lagi muncul. keepOwnerId (pemilik tersimpan di tagihan) tetap ditawarkan agar pilihan lama tidak hilang saat edit.
+// build() tak tersedia/gagal -> daftar penuh (perilaku S2850).
+function billTalanganActiveOwnerIds(){
+try{
+if(typeof DanaTitipanPortfolioAPI==='undefined'||!DanaTitipanPortfolioAPI||typeof DanaTitipanPortfolioAPI.build!=='function')return null;
+const r=DanaTitipanPortfolioAPI.build();
+if(!r||!Array.isArray(r.owners))return null;
+return new Set(r.owners.filter(o=>o&&o.ownerId!=null).map(o=>String(o.ownerId)));
+}catch(e){return null;}
+}
+function billTalanganOwnerChoices(accId,projectId,keepOwnerId){
+if(!accId||typeof DanaTitipanPortfolioAPI==='undefined'||!DanaTitipanPortfolioAPI||typeof DanaTitipanPortfolioAPI.listExistingOwners!=='function')return [];
+const p=projectId&&Array.isArray(D.renovProjects)?D.renovProjects.find(x=>sameId(x.id,projectId)):null;
+if(p&&p.dana==='klien')return [];
+const have=new Set(renovAccountOwners(accId).map(o=>String(o.ownerId)));
+const active=billTalanganActiveOwnerIds(),keep=keepOwnerId?String(keepOwnerId):'';
+return (DanaTitipanPortfolioAPI.listExistingOwners()||[]).filter(o=>o&&o.ownerId&&String(o.ownerId)!=='SELF'&&!have.has(String(o.ownerId))&&(!active||active.has(String(o.ownerId))||String(o.ownerId)===keep));
+}
 function updateBillRenovOwnerVisibility(keepOwnerId){
 const wrap=document.getElementById('billRenovOwnerWrap'),sel=document.getElementById('billRenovOwner');if(!wrap||!sel)return;
 const prev=(typeof keepOwnerId==='string')?keepOwnerId:sel.value;
@@ -407,8 +433,12 @@ const owners=renovAccountOwners(accId);
 if(!accId){wrap.style.display='none';sel.innerHTML='';return;}
 wrap.classList.remove('u-dnone');
 wrap.style.display='block';
-renovFillOwnerSelect(sel,owners,'billAcc','updateBillRenovOwnerVisibility','— Pilih saat bayar —');
-sel.value=owners.some(o=>o.ownerId===prev)?prev:(owners.length===1?owners[0].ownerId:'');
+// S2844: tanpa Proyek Renovasi, kosong = ikut pemilik akun sumber (tidak ditanya saat bayar); dengan proyek, tetap "Pilih saat bayar".
+const _projEl=document.getElementById('billRenovProject');
+renovFillOwnerSelect(sel,owners,'billAcc','updateBillRenovOwnerVisibility',(_projEl&&!_projEl.value)?'— Ikut pemilik akun —':'— Pilih saat bayar —');
+const _tal=billTalanganOwnerChoices(accId,_projEl&&_projEl.value,prev);// S2850 item 4: pemilik titipan yang tidak punya porsi di akun ini = "ditalangi"
+if(_tal.length){const _mg=sel.querySelector('option[value="'+RENOV_OWNER_MANAGE_VALUE+'"]');_tal.forEach(o=>{const op=document.createElement('option');op.value=o.ownerId;op.textContent='🤝 '+(o.ownerName||o.ownerId)+' (ditalangi)';sel.insertBefore(op,_mg);});}
+sel.value=(owners.some(o=>o.ownerId===prev)||_tal.some(o=>o.ownerId===prev))?prev:(owners.length===1?owners[0].ownerId:'');
 sel.setAttribute('data-prev-owner',sel.value||'');
 }
 
@@ -487,7 +517,7 @@ if(t.renovProjectLinkId){
 if(!hasProj(t.renovProjectLinkId)){if(projectId==null)out.push({kind:'proyek-hilang',txId:t.id,fixable:false});return;}
 if(!inScope(t.renovProjectLinkId))return;
 if(owners.length&&!t.deductionOwnerId)out.push({kind:'tanpa-penanggung',txId:t.id,projectId:t.renovProjectLinkId,fixable:owners.length===1,ownerId:owners.length===1?owners[0].ownerId:''});
-else if(owners.length&&t.deductionOwnerId&&!owners.some(o=>o.ownerId===t.deductionOwnerId)){const _m=renovMatchOwnerByName(t.deductionOwnerId,owners);out.push({kind:'penanggung-asing',txId:t.id,projectId:t.renovProjectLinkId,fixable:!!_m,ownerId:_m?_m.ownerId:''});}
+else if(owners.length&&t.deductionOwnerId&&t.titipanTalangan!==true&&!owners.some(o=>o.ownerId===t.deductionOwnerId)){const _m=renovMatchOwnerByName(t.deductionOwnerId,owners);out.push({kind:'penanggung-asing',txId:t.id,projectId:t.renovProjectLinkId,fixable:!!_m,ownerId:_m?_m.ownerId:''});}
 if(t.renovItemLinkId){
 const p=projs.find(x=>sameId(x.id,t.renovProjectLinkId)),it=p&&(p.items||[]).find(x=>sameId(x.id,t.renovItemLinkId));
 const ok=it&&(Array.isArray(it.payments)?it.payments.some(x=>sameId(x.txId,t.id)):sameId(it.txId,t.id));
@@ -511,4 +541,296 @@ function renovRepairMarkers(projectId){
 const before=renovMarkerAudit(projectId),ids=[];
 before.forEach(m=>{if((m.kind==='tanpa-penanggung'||m.kind==='penanggung-asing')&&m.fixable&&m.ownerId&&typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT){FinanceTxSOT.patchMetaById(m.txId,{deductionOwnerId:m.ownerId});ids.push(m.txId);}});
 return{fixed:ids.length,ids,remaining:before.length-ids.length,total:before.length};
+}
+// ===== S2844 — Tagihan per KEPEMILIKAN (Pribadi / Titipan) =====
+// (ditaruh di tx-renov.js bersama renovAccountOwners; dipakai tagihan-kalender.js & modules-render.js saat runtime)
+// SSOT tunggal = bill.deductionOwnerId (sudah ada & ikut ke transaksi saat bayar) + pemilik akun sumber. 0 field baru.
+// Identitas TIDAK pernah digabung: tiap pemilik titipan dihitung & ditampilkan sendiri-sendiri (mis. "renov" != "home in").
+function billOwnerIdFromForm(){
+const proj=document.getElementById('billRenovProject'),own=document.getElementById('billRenovOwner');
+const v=(own&&own.value)||'';
+if(!v||v==='__manage_owners__')return '';
+if(proj&&proj.value)return v;
+const accEl=document.getElementById('billAcc');
+const owners=(typeof renovAccountOwners==='function')?renovAccountOwners(accEl?accEl.value:''):[];
+const hit=owners.find(o=>String(o.ownerId)===String(v));
+return (v==='SELF'||(hit&&hit.isSelf))?'':v;
+}
+// billOwnershipOf(b) -> {scope:'pribadi'|'titipan', ownerId, ownerName, source:'bill'|'akun'|'multi'|''}
+// 1) pemilik tersimpan di tagihan (bukan SELF) -> titipan  2) akun dengan TEPAT 1 pemilik non-SELF -> titipan (otomatis, sama seperti
+// penandaan transaksi saat bayar)  3) akun multi-pemilik non-SELF tanpa pilihan -> titipan "belum dipilih"  4) selain itu -> pribadi.
+function billOwnershipOf(b){
+const accId=(b&&b.accountId)||((D.accounts&&D.accounts[0])?D.accounts[0].id:'')||'';
+const owners=(typeof renovAccountOwners==='function')?renovAccountOwners(accId):[];
+const nameOf=id=>{const o=owners.find(x=>String(x.ownerId)===String(id));if(o&&(o.ownerName||o.ownerId))return String(o.ownerName||o.ownerId);
+if(typeof OwnerRegistry!=='undefined'&&OwnerRegistry&&typeof OwnerRegistry.listAll==='function'){const r=(OwnerRegistry.listAll()||[]).find(x=>x&&String(x.id)===String(id));if(r&&r.name)return String(r.name);}
+return String(id);};
+const sid=b&&b.deductionOwnerId?String(b.deductionOwnerId):'';
+if(sid&&sid!=='SELF')return{scope:'titipan',ownerId:sid,ownerName:nameOf(sid),source:'bill'};
+const ext=owners.filter(o=>o&&!o.isSelf&&o.ownerId&&o.ownerId!=='SELF');
+if(ext.length===1&&owners.length===1)return{scope:'titipan',ownerId:String(ext[0].ownerId),ownerName:String(ext[0].ownerName||ext[0].ownerId),source:'akun'};
+if(ext.length>1)return{scope:'titipan',ownerId:'',ownerName:'Pemilik belum dipilih',source:'multi'};
+return{scope:'pribadi',ownerId:'',ownerName:'',source:''};
+}
+// getBillOwnershipSplit(month,year) -> {total, pribadi, titipan, owners:[{ownerId,ownerName,amount,count}]}; total == getBillStats().monthTotal.
+function getBillOwnershipSplit(month,year){
+const now=new Date(),m=(month!=null?month:now.getMonth()),y=(year!=null?year:now.getFullYear());
+const out={total:0,pribadi:0,titipan:0,owners:[]};const map=new Map();
+(D.bills||[]).forEach(b=>{
+const n=getBillOccurrencesInMonth(b,y,m).length;if(!n)return;
+const amt=n*(b.amount||0);out.total+=amt;
+const o=billOwnershipOf(b);
+if(o.scope==='pribadi'){out.pribadi+=amt;return;}
+out.titipan+=amt;
+const key=o.ownerId||('__'+o.ownerName);
+if(!map.has(key))map.set(key,{ownerId:o.ownerId,ownerName:o.ownerName,amount:0,count:0});
+const e=map.get(key);e.amount+=amt;e.count+=n;
+});
+out.owners=Array.from(map.values()).sort((a,b)=>b.amount-a.amount);
+return out;
+}
+// Ringkasan Pribadi / Titipan di bawah pill statistik. Elemen dibuat dinamis (index.html tidak diubah); hanya muncul bila ada tagihan
+// titipan di bulan yang dibuka -- tanpa titipan, tampilan lama persis sama.
+function _updateBillOwnershipCardCore(prefix){
+const grid=document.getElementById(prefix+'StatGrid');if(!grid||!grid.parentNode)return;
+const id=prefix+'OwnerSplit';let el=document.getElementById(id);
+const sp=getBillOwnershipSplit(billStatMonth,billStatYear);
+const tal=talanganBelumDiganti();
+if(!sp.titipan&&!tal.total){if(el)el.remove();return;}
+if(!el){el=document.createElement('div');el.id=id;el.className='bill-owner-split u-mb8';grid.parentNode.insertBefore(el,grid.nextSibling);}
+const esc=typeof escapeHtml==='function'?escapeHtml:(x=>String(x));
+const money=typeof fmt==='function'?fmt:(n=>'Rp '+Math.round(n||0));
+const chips=sp.owners.map(o=>'<span class="acc-chip" title="Titipan atas nama '+esc(o.ownerName)+'">🤝 '+esc(o.ownerName)+' · '+money(o.amount)+'</span>').join(' ');
+const talHtml=tal.total?'<div class="u-fs12 u-t2 u-mt4" data-talangan-belum style="display:flex;flex-wrap:wrap;gap:4px"><span class="acc-chip" style="color:var(--accent4)" title="Piutang talangan titipan yang belum diganti pemilik">Talangan belum diganti: '+money(tal.total)+'</span>'+tal.owners.map(o=>'<span class="acc-chip" title="Talangan atas nama '+esc(o.ownerName)+'">🤝 '+esc(o.ownerName)+' · '+money(o.amount)+'</span>').join(' ')+'</div>':'';
+if(!sp.titipan){el.innerHTML=talHtml;return;}
+el.innerHTML='<div class="bill-stat-pills"><div class="bill-stat-pill"><span class="stat-label">Pribadi</span><span class="stat-val">'+money(sp.pribadi)+'</span></div>'
++'<div class="bill-stat-pill"><span class="stat-label">Titipan</span><span class="stat-val orange">'+money(sp.titipan)+'</span></div></div>'
++'<div class="u-fs12 u-t2 u-mt4" style="display:flex;flex-wrap:wrap;gap:4px">'+chips+'</div>'+talHtml;
+}
+// ===== S2847 — Perbaiki penanda titipan pada PEMBAYARAN TAGIHAN lama (sebelum S2844) =====
+// Kandidat: transaksi pengeluaran hasil bayar tagihan (billLinkId), belum punya deductionOwnerId, bukan tx proyek (itu urusan renovMarkerAudit),
+// dan pemiliknya jelas: pemilik tersimpan di tagihan / akun dgn TEPAT 1 pemilik non-SELF; pemilik wajib masih pemilik akun tx. Transaksi biasa (non-tagihan) TIDAK disentuh.
+function titipanLamaAudit(){
+const bills=new Map();(D.bills||[]).concat(D.billsArchive||[]).forEach(b=>{if(b&&b.id!=null)bills.set(String(b.id),b);});
+const out=[];
+(D.transactions||[]).forEach(t=>{
+if(!t||t.type!=='expense'||t.billLinkId==null||t.billLinkId===''||t.deductionOwnerId||t.renovProjectLinkId)return;
+const owners=renovAccountOwners(t.accountId);if(!owners.length)return;
+const b=bills.get(String(t.billLinkId));
+let o=null;
+if(b){const x=billOwnershipOf(Object.assign({},b,{accountId:t.accountId}));if(x.scope==='titipan'&&x.ownerId)o=x;}
+else{const ext=owners.filter(q=>q&&!q.isSelf&&q.ownerId&&q.ownerId!=='SELF');if(ext.length===1&&owners.length===1)o={ownerId:String(ext[0].ownerId),ownerName:String(ext[0].ownerName||ext[0].ownerId)};}
+if(!o||!owners.some(q=>String(q.ownerId)===String(o.ownerId)))return;
+out.push({txId:t.id,ownerId:o.ownerId,ownerName:o.ownerName,amount:Number(t.amount)||0,date:t.date});
+});
+return out;
+}
+function titipanLamaRingkas(list){
+const l=list||titipanLamaAudit(),m=new Map();let total=0;
+l.forEach(x=>{total+=x.amount;const e=m.get(x.ownerId)||{ownerId:x.ownerId,ownerName:x.ownerName,count:0,amount:0};e.count++;e.amount+=x.amount;m.set(x.ownerId,e);});
+return{count:l.length,total,owners:Array.from(m.values())};
+}
+function titipanLamaRepair(){
+const list=titipanLamaAudit(),ids=[];
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)return{fixed:0,ids,total:list.length};
+list.forEach(x=>{FinanceTxSOT.patchMetaById(x.txId,{deductionOwnerId:x.ownerId});ids.push(x.txId);});
+if(ids.length&&typeof save==='function')save();
+return{fixed:ids.length,ids,total:list.length};
+}
+function updateBillOwnershipCard(prefix){
+_updateBillOwnershipCardCore(prefix);
+const grid=document.getElementById(prefix+'StatGrid');if(!grid||!grid.parentNode)return;
+const id=prefix+'TitipanLamaFix';let el=document.getElementById(id);
+const r=titipanLamaRingkas();
+if(!r.count){if(el)el.remove();return;}
+const money=typeof fmt==='function'?fmt:(n=>'Rp '+Math.round(n||0));
+if(!el){el=document.createElement('div');el.id=id;el.className='u-fs12 u-t2 u-mb8';const anchor=document.getElementById(prefix+'OwnerSplit')||grid;grid.parentNode.insertBefore(el,anchor.nextSibling);}
+el.innerHTML='🔧 '+r.count+' pembayaran tagihan lama ('+money(r.total)+') belum bertanda titipan. <button type="button" class="cn-tab" data-titipan-lama>Periksa &amp; perbaiki</button>';
+const btn=el.querySelector('[data-titipan-lama]');
+if(btn)btn.addEventListener('click',async()=>{
+const cur=titipanLamaRingkas();if(!cur.count)return;
+const per=cur.owners.map(o=>o.ownerName+': '+o.count+' transaksi, '+money(o.amount)).join('; ');
+const ok=typeof askConfirm==='function'?await askConfirm('Tandai '+cur.count+' pembayaran tagihan lama ('+money(cur.total)+') sebagai titipan? '+per+'. Akibatnya total pengeluaran PRIBADI di Laporan/Hub turun sebesar itu (saldo tidak berubah). Transaksi biasa tidak disentuh.',{okText:'Ya, tandai',icon:'🔧'}):false;
+if(!ok)return;
+const res=titipanLamaRepair();
+if(typeof toast==='function')toast('✅ '+res.fixed+' pembayaran ditandai titipan');
+if(typeof refreshBillEverywhere==='function')refreshBillEverywhere();else updateBillOwnershipCard(prefix);
+});
+}
+// billStoredOwnerForPay(b) -> ownerId tersimpan di tagihan NON-proyek bila masih pemilik akun sumber, selain itu '' (perilaku lama).
+function billStoredOwnerForPay(b){
+if(!b||!b.deductionOwnerId)return '';
+const owners=renovAccountOwners(b.accountId||(D.accounts&&D.accounts[0]?D.accounts[0].id:'')||'');
+return owners.some(o=>String(o.ownerId)===String(b.deductionOwnerId))?String(b.deductionOwnerId):'';
+}
+// ===== S2848 — Talangan titipan dari pembayaran tagihan (fase 1) =====
+// Tagihan titipan "home in" dibayar dari akun yang TIDAK memuat porsi "home in" (mis. Cash) = uang pemilik app yang keluar -> "home in" berutang.
+// Memakai mekanisme talangan Dana Titipan yang SUDAH ada (S519): tx.titipanLinkId + tx.titipanTalangan===true + maybeCreateTitipanTalanganPiutang()
+// (piutang 1:1 via autoTxId, idempotent; edit/hapus transaksi sudah menyinkronkan piutang). deductionOwnerId ikut diisi (pola titipan-expense-flow)
+// sehingga transaksi keluar dari basis PRIBADI lewat isTxDeductionNonSelfSafe (S2845). Potong porsi (akun memuat pemilik) TIDAK berubah.
+// Identitas tidak pernah digabung: satu piutang per pemilik.
+function billTalanganOwnerForPay(b){
+if(!b||!b.deductionOwnerId)return '';
+const sid=String(b.deductionOwnerId);
+if(sid==='SELF')return '';
+const accId=b.accountId||(D.accounts&&D.accounts[0]?D.accounts[0].id:'')||'';
+const owners=renovAccountOwners(accId);
+if(owners.some(o=>String(o.ownerId)===sid))return '';// pemilik punya porsi di akun sumber = potong porsi, bukan talangan
+if(typeof resolveTxTitipanOwner!=='function'||!resolveTxTitipanOwner(sid))return '';// pemilik tak dikenal Dana Titipan: perilaku lama (tanpa piutang hantu)
+return sid;
+}
+// Field transaksi pembayaran untuk talangan ({} bila bukan talangan). Dipanggil markBillPaid hanya untuk tagihan non-proyek tanpa pemilik porsi.
+function billTalanganPayMeta(b){
+const o=billTalanganOwnerForPay(b);
+return o?{titipanLinkId:o,titipanTalangan:true,deductionOwnerId:o}:null;
+}
+// S2850 item 1 — tagihan tertaut Proyek Renovasi NON-klien: pemilik tersimpan di tagihan dihormati. Sebelumnya resolveRenovBillOwner memilih pemilik
+// AKUN sumber (SELF) dan membuang "home in" -> pembayaran Cash/Gopay masuk pengeluaran pribadi tanpa piutang. Kini bila pemilik tersimpan bukan pemilik akun
+// sumber = talangan (meta S2848, tanpa dialog pemilik) dan pembayaran TETAP tertaut ke item proyek (applyRenovBillPayment). Proyek dana==='klien' tetap
+// perilaku lama (dialog pemilik + sumberDana klien) agar tidak dobel dengan piutang talangan-tagih (renovPaymentId). Return meta atau null.
+function billRenovTalanganMeta(b,p){
+if(!b||!p||p.dana==='klien')return null;
+return billTalanganPayMeta(b);
+}
+// Buat piutang talangan untuk transaksi pembayaran yang sudah dibuat. Idempotent (autoTxId). Return baris piutang atau null.
+function billEnsureTalanganPiutang(txId){
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT||typeof maybeCreateTitipanTalanganPiutang!=='function')return null;
+const tx=FinanceTxSOT.findById(txId);
+if(!tx||tx.titipanTalangan!==true||!tx.titipanLinkId)return null;
+maybeCreateTitipanTalanganPiutang(tx);
+return (D.piutang||[]).find(p=>p&&p.autoTxId===tx.id)||null;
+}
+// Teks tambahan toast bayar ("Dicatat sebagai talangan ke home in Rp212.000"); '' bila pembayaran ini bukan talangan.
+function billTalanganNote(txId){
+const p=(D.piutang||[]).find(x=>x&&x.autoTxId===txId&&x.autoTitipanOwnerId);
+if(!p)return '';
+const own=(typeof resolveTxTitipanOwner==='function'&&resolveTxTitipanOwner(p.autoTitipanOwnerId))||null;
+const money=typeof fmtFull==='function'?fmtFull:(typeof fmt==='function'?fmt:(n=>'Rp '+Math.round(n||0)));
+return ' · 🤝 Dicatat sebagai talangan ke '+((own&&own.ownerName)||'pemilik titipan')+' '+money(p.nilai);
+}
+// ===== S2848 fase 3-4 — pelunasan talangan (non-pribadi) + tampilan =====
+// talanganBelumDiganti() -> {total, owners:[{ownerId,ownerName,amount,count}]}: piutang talangan titipan (autoTxId + autoTitipanOwnerId) yang belum lunas, per pemilik (tidak digabung).
+function talanganBelumDiganti(){
+const out={total:0,owners:[]},map=new Map();
+(D.piutang||[]).forEach(p=>{
+if(!p||p.lunas||p.autoTxId==null||!p.autoTitipanOwnerId)return;
+const amt=Number(p.nilai)||0;if(!(amt>0))return;
+out.total+=amt;
+const k=String(p.autoTitipanOwnerId);
+if(!map.has(k)){const r=(typeof resolveTxTitipanOwner==='function'&&resolveTxTitipanOwner(k))||null;map.set(k,{ownerId:k,ownerName:(r&&r.ownerName)||k,amount:0,count:0});}
+const e=map.get(k);e.amount+=amt;e.count++;
+});
+out.owners=Array.from(map.values()).sort((a,b)=>b.amount-a.amount);
+return out;
+}
+// Pelunasan: pemilik mengganti talangan -> kas naik, piutang turun (netral di kekayaan bersih). Pemasukan ini BUKAN pendapatan pribadi
+// (talanganPelunasanOwnerId dikecualikan oleh isAliranKlienSafe). Masuk ke akun yang sama dengan transaksi talangan. Return txId atau null.
+function talanganPayoffCreate(p,nilai,tgl){
+if(!p||p.autoTxId==null||!p.autoTitipanOwnerId||typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)return null;
+const orig=FinanceTxSOT.findById(p.autoTxId);
+if(!orig||!orig.accountId)return null;
+const n=Math.round(Number(nilai==null?p.nilai:nilai));if(!(n>0))return null;
+if(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT&&typeof FinanceCategorySOT.ensureCategory==='function')FinanceCategorySOT.ensureCategory('income',{name:'Piutang',emoji:'🤝'});// taksonomi pemasukan tidak selalu punya 'Piutang' (backup lama)
+const tx={id:uid(),type:'income',amount:n,category:'Piutang',subcategory:'',accountId:orig.accountId,payMethod:'tunai',note:'Talangan diganti: '+(p.name||'titipan'),date:(typeof tgl==='string'&&/^\d{4}-\d{2}-\d{2}/.test(tgl))?tgl.slice(0,10):todayStr()};
+FinanceTxSOT.create(tx);
+FinanceTxSOT.patchMetaById(tx.id,{talanganPelunasanOwnerId:String(p.autoTitipanOwnerId),talanganPiutangId:p.id});
+return tx.id;
+}
+// Dibuka lagi (Lunas -> Belum Lunas): pemasukan pelunasan dibatalkan supaya kas tidak dobel.
+function talanganPayoffReverse(p){
+if(!p||!p.linkedPayoffTxId||typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)return false;
+const t=FinanceTxSOT.findById(p.linkedPayoffTxId);
+if(!t||!t.talanganPelunasanOwnerId)return false;
+return !!FinanceTxSOT.removeById(p.linkedPayoffTxId);
+}
+// S2849 — pelunasan SEBAGIAN talangan. Piutang.nilai = SISA. Nilai turun (tanpa lunas) + dicatat sebagai pelunasan = pemasukan non-pribadi sebesar selisih
+// (talanganPayoffCreate, bertanda talanganPiutangId). Pelunasan akhir = pemasukan sebesar sisa (linkedPayoffTxId). Pelunasan lain dicari lewat tx: tanpa field baru di piutang.
+function talanganPartialTxs(p){
+if(!p||typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)return [];
+return (D.transactions||[]).filter(t=>t&&t.type==='income'&&t.talanganPelunasanOwnerId&&t.talanganPiutangId!=null&&sameId(t.talanganPiutangId,p.id)&&!(p.linkedPayoffTxId!=null&&sameId(p.linkedPayoffTxId,t.id)));
+}
+// Edit transaksi talangan lewat cabang tagihan/cicilan/langganan (return awal) -> sinkronkan sisa piutang sebesar selisih nominal.
+function talanganSyncOnTxEdit(tx,oldAmt){
+const base=_talEditBase&&tx&&_talEditBase.id===tx.id?_talEditBase:null;_talEditBase=null;
+if(base){try{talanganSyncOnAccountChange(tx,base.acc,base.own);}catch(e){console.warn('[talangan] sinkron pindah akun gagal',e);}billRenovPaymentSyncOnEdit(tx);}
+if(!tx||tx.titipanTalangan!==true||!tx.titipanLinkId||typeof syncTitipanTalanganPiutangOnEdit!=='function')return false;
+const n=Number(tx.amount)||0,o=Number(oldAmt)||0;
+if(n===o)return false;
+return syncTitipanTalanganPiutangOnEdit(tx.id,o,n);
+}
+// S2851 — dasar edit: akun asal transaksi dicatat SEBELUM Object.assign di _saveTxInner; dibaca talanganSyncOnTxEdit (cabang tagihan/cicilan/langganan).
+let _talEditBase=null;
+function talanganRememberEditBase(tx){_talEditBase=tx?{id:tx.id,acc:tx.accountId,own:tx.deductionOwnerId}:null;}
+// Cabang edit umum (bukan utang/cicilan/langganan): tanda pemilik pembayaran tagihan dipertahankan; sinkron pindah akun dijalankan setelahnya.
+function talanganKeepsOwnerOnEdit(tx){return !!(tx&&tx.billLinkId&&_talEditBase&&_talEditBase.id===tx.id&&_talEditBase.own&&String(_talEditBase.own)!=='SELF');}
+function talanganAfterGenericEdit(tx){
+const base=_talEditBase&&tx&&_talEditBase.id===tx.id?_talEditBase:null;
+if(!base)return null;
+_talEditBase=null;
+try{return talanganSyncOnAccountChange(tx,base.acc,base.own);}catch(e){console.warn('[talangan] sinkron pindah akun gagal',e);return null;}
+}
+// S2852 — edit lewat modal (cabang umum _saveTxInner) dulu SELALU melepas billLinkId. Kini tautan ke tagihan dipertahankan bila tagihan masih ada
+// (aktif atau arsip lunas), transaksi tetap pengeluaran, dan pengguna tidak sengaja mengganti Cara Bayar (touched=false). Ganti Cara Bayar / ubah jadi
+// pemasukan / tagihan sudah tak ada = lepas tautan (perilaku lama). Cabang tagihan/utang/cicilan/langganan aktif sudah mempertahankan tautan sendiri.
+function billLinkKeepOnGenericEdit(tx,payMethodTouched){
+if(!tx||tx.billLinkId==null||payMethodTouched||tx.type!=='expense')return false;
+const has=(arr)=>Array.isArray(arr)&&arr.some(b=>b&&sameId(b.id,tx.billLinkId));
+return has(D.bills)||has(D.billsArchive);
+}
+function talanganOwnerHasShare(ownerId,accId){return renovAccountOwners(accId).some(o=>String(o.ownerId)===String(ownerId));}
+// Pindah akun sumber pada pembayaran tagihan titipan: talangan <-> potong porsi mengikuti porsi pemilik di akun BARU.
+// - Talangan dipindah ke akun yang memuat porsi pemilik -> bukan talangan lagi: piutang belum lunas dihapus, penanda talangan dilepas (deductionOwnerId tetap = tidak pribadi).
+//   Bila piutang sudah lunas / sudah ada pelunasan sebagian -> TIDAK diubah (pemasukan pelunasan tidak dihapus diam-diam), pengguna diberi tahu.
+// - Potong porsi dipindah ke akun tanpa porsi pemilik -> menjadi talangan (penanda + piutang otomatis).
+// Hanya pembayaran tagihan (billLinkId) bertanda pemilik non-SELF yang dikenal Dana Titipan. Return 'toTalangan'|'toPorsi'|'kept'|null.
+function talanganSyncOnAccountChange(tx,oldAcc,oldOwner){
+if(!tx||tx.type!=='expense'||String(oldAcc||'')===String(tx.accountId||'')||typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)return null;
+// Arah talangan -> potong porsi cukup berpegang pada penanda talangan (edit lewat modal bisa melepas billLinkId lebih dulu); arah sebaliknya tetap butuh billLinkId.
+if(tx.titipanTalangan===true&&tx.titipanLinkId){
+if(!talanganOwnerHasShare(tx.titipanLinkId,tx.accountId))return null;
+const pi=(D.piutang||[]).find(x=>x&&x.autoTxId===tx.id);
+if(pi&&(pi.lunas||talanganPartialTxs(pi).length>0)){if(typeof toast==='function')toast('⚠️ Akun baru memuat porsi pemilik, tetapi piutang talangan sudah ada pelunasan — dibiarkan sebagai talangan. Tinjau di Buku Piutang.',6500);return 'kept';}
+if(typeof removeUnpaidTitipanTalanganPiutangForTx==='function')removeUnpaidTitipanTalanganPiutangForTx(tx.id);
+FinanceTxSOT.patchMetaById(tx.id,{titipanTalangan:undefined,titipanLinkId:undefined});
+if(typeof toast==='function')toast('ℹ️ Akun baru memuat porsi pemilik: bukan talangan lagi, piutang talangan dibatalkan',4500);
+return 'toPorsi';
+}
+if(!tx.billLinkId)return null;
+const own=(tx.deductionOwnerId||oldOwner)?String(tx.deductionOwnerId||oldOwner):'';// form edit bisa menghapus deductionOwnerId lebih dulu -> pakai nilai sebelum edit
+if(!own||own==='SELF'||tx.titipanLinkId||typeof resolveTxTitipanOwner!=='function'||!resolveTxTitipanOwner(own))return null;
+if(talanganOwnerHasShare(own,tx.accountId))return null;
+FinanceTxSOT.patchMetaById(tx.id,{titipanLinkId:own,titipanTalangan:true,deductionOwnerId:own});
+billEnsureTalanganPiutang(tx.id);
+if(typeof toast==='function')toast('ℹ️ Akun baru tanpa porsi pemilik: dicatat sebagai talangan'+billTalanganNote(tx.id),5000);
+return 'toTalangan';
+}
+// Muat modul Renovasi (lazy, boot-early.js) bila transaksi bertaut proyek dan Renov belum ada. Tanpa ini cascade hapus/edit di Keuangan
+// (guard typeof Renov) lolos diam-diam dan meninggalkan payment yatim di item proyek. Return true bila siap / tidak perlu.
+function renovTxNeedsModule(t){return !!(t&&(t.renovItemLinkId||t.renovPaymentId!=null||t.renovDpProjectId!=null||t.renovRefundProjectId!=null));}
+async function renovEnsureForTx(t){
+if(!renovTxNeedsModule(t)||typeof Renov!=='undefined')return true;
+if(typeof ensureRenov!=='function')return false;
+try{await ensureRenov();}catch(e){console.warn('[Renov] gagal memuat modul untuk sinkron transaksi',e);return false;}
+return typeof Renov!=='undefined';
+}
+// Cabang tagihan/cicilan/langganan di _saveTxInner kembali sebelum Renov.onLinkedTxEdited -> payment item proyek basi (nominal/tanggal/akun). Sinkronkan di sini.
+function billRenovPaymentSyncOnEdit(tx){
+if(!tx||!tx.renovItemLinkId||typeof Renov==='undefined'||!Renov||typeof Renov.onLinkedTxEdited!=='function')return false;
+Renov.onLinkedTxEdited(tx);return true;
+}
+function talanganIsPiutang(p){return !!(p&&p.autoTxId!=null&&p.autoTitipanOwnerId);}
+// Transaksi pemasukan pelunasan dihapus langsung -> piutang menyesuaikan (tak ada pemasukan hilang diam-diam / piutang lunas tanpa kas).
+// Akhir dihapus -> piutang dibuka lagi (sisa tetap). Sebagian dihapus -> sisa bertambah; bila piutang sudah lunas, dibuka lagi dengan sisa = nilai sebagian itu (pelunasan akhir lama menjadi riwayat).
+function talanganPayoffTxDeleted(t){
+if(!t||t.type!=='income'||!t.talanganPelunasanOwnerId||t.talanganPiutangId==null||!Array.isArray(D.piutang))return false;
+const p=D.piutang.find(x=>x&&sameId(x.id,t.talanganPiutangId));
+if(!p||!talanganIsPiutang(p))return false;
+const isFinal=p.linkedPayoffTxId!=null&&sameId(p.linkedPayoffTxId,t.id);
+const amt=Math.max(0,Math.round(Number(t.amount)||0));
+BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,p0=>{
+if(isFinal){p0.lunas=false;p0.linkedPayoffTxId=null;}
+else if(p0.lunas){p0.lunas=false;p0.linkedPayoffTxId=null;p0.nilai=amt;}
+else p0.nilai=Math.max(0,Math.round(Number(p0.nilai)||0))+amt;
+});
+return true;
 }

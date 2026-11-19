@@ -56,6 +56,14 @@ return recommendations.map(r=>`${RecommendationPanel._icon(r.type)} ${r.message}
 // dimuat/tidak ada item di queue/getQueue() error — pemanggil
 // (initChat()/_sendChatInner()) TETAP jalan seperti biasa, cuma tanpa
 // baris action queue (silent, bukan error blocking).
+// S2853: nama pemilik Dana Titipan untuk prompt (ownerName di add_transaksi/add_tagihan harus salah satu dari ini).
+function chatTitipanOwnerNames(){
+try{
+if(typeof DanaTitipanPortfolioAPI==='undefined'||typeof DanaTitipanPortfolioAPI.listExistingOwners!=='function')return '-';
+const l=DanaTitipanPortfolioAPI.listExistingOwners().map(o=>o&&o.ownerName).filter(Boolean);
+return l.length?l.join(', '):'-';
+}catch(e){void e;return '-';}
+}
 function actionQueueChatContext(){
 if(typeof ActionQueue==='undefined'||typeof ActionQueue.getQueue!=='function')return null;
 try{
@@ -117,18 +125,53 @@ const el=document.getElementById('chatAction_'+actionId);
 if(!pending||!el)return;
 el.innerHTML=chatActionInnerHTML(actionId,pending.type,pending.data);
 }
-function confirmChatAction(actionId){
+async function confirmChatAction(actionId){
 const pending=_pendingChatActions[actionId];
 const el=document.getElementById('chatAction_'+actionId);
 if(!pending||!el)return;
+if(pending._busy)return;
+pending._busy=true;
 try{
-const msg=CHAT_ACTION_HANDLERS[pending.type](pending.data);
+const msg=await CHAT_ACTION_HANDLERS[pending.type](pending.data);
 el.innerHTML=`<div class="u-fw700">✅ Tersimpan</div><div class="u-fs13 u-t2">${escapeHtml(msg)}</div>`;
 toast('✅ Tersimpan dari chat AI');
 }catch(e){
 el.innerHTML=`<div class="u-fw700" style="color:#ff5050">⚠️ Gagal: ${escapeHtml(e.message||'Terjadi kesalahan')}</div>`;
 }
 delete _pendingChatActions[actionId];
+}
+// S2853: konfirmasi semua usulan satu balasan sekaligus. Tiap usulan dijalankan sendiri-sendiri (gagal satu tidak membatalkan yang lain); hasil diringkas.
+// eslint-disable-next-line no-unused-vars
+async function confirmAllChatActions(idsJson){
+let ids=[];try{ids=typeof idsJson==='string'?JSON.parse(idsJson):idsJson;}catch(e){void e;}
+if(!Array.isArray(ids))return;
+let ok=0;const fails=[];
+for(const id of ids){
+const pending=_pendingChatActions[id];
+const el=document.getElementById('chatAction_'+id);
+if(!pending||!el||pending._busy)continue;
+pending._busy=true;
+try{
+const msg=await CHAT_ACTION_HANDLERS[pending.type](pending.data);
+el.innerHTML=`<div class="u-fw700">✅ Tersimpan</div><div class="u-fs13 u-t2">${escapeHtml(msg)}</div>`;
+ok++;
+}catch(e){
+el.innerHTML=`<div class="u-fw700" style="color:#ff5050">⚠️ Gagal: ${escapeHtml(e.message||'Terjadi kesalahan')}</div>`;
+fails.push(e.message||'error');
+}
+delete _pendingChatActions[id];
+}
+const sum=document.getElementById('chatActionAll_'+ids[0]);
+if(sum)sum.innerHTML=`<div class="u-fw700">${fails.length?'⚠️':'✅'} ${ok} tersimpan${fails.length?', '+fails.length+' gagal (lihat kartu di atas)':''}</div>`;
+if(ok)toast('✅ '+ok+' data tersimpan dari chat AI');
+}
+// eslint-disable-next-line no-unused-vars
+function cancelAllChatActions(idsJson){
+let ids=[];try{ids=typeof idsJson==='string'?JSON.parse(idsJson):idsJson;}catch(e){void e;}
+if(!Array.isArray(ids))return;
+ids.forEach(id=>{if(_pendingChatActions[id])cancelChatAction(id);});
+const sum=document.getElementById('chatActionAll_'+ids[0]);
+if(sum)sum.innerHTML='<div class="u-t2">❌ Semua usulan dibatalkan</div>';
 }
 function cancelChatAction(actionId){
 const el=document.getElementById('chatAction_'+actionId);
@@ -384,21 +427,31 @@ PERANMU:
 - Tetap LENGKAP dan TUNTAS — jangan potong di tengah, jangan skip bagian pertanyaan yang belum kejawab — tapi rangkumnya padat, hindari basa-basi yang cuma buang-buang waktu baca.
 - Tidak ada batas kata, tapi utamakan singkat, jelas, to the point dibanding panjang & muter-muter.
 - CATATAN DATA: beberapa bagian (kendaraan/produk shop/sparepart/aset) ditampilkan RINGKAS kalau pertanyaan user tidak spesifik menyinggung topik itu — supaya hemat. Kalau user tanya lebih detail soal salah satu topik itu, dia akan otomatis dapat versi lengkap di pertanyaan berikutnya (tidak perlu kamu minta dia ganti prompt, cukup jawab dari ringkasan yang ada, atau bilang "tanya lebih spesifik ya" kalau datanya belum cukup).
-- USUL AKSI (opsional): kalau dari obrolan JELAS user mau MENCATAT sesuatu yang konkret (bukan cuma nanya/curhat) — misal "catat aku abis beli bensin 50rb", "tambahin tagihan listrik 200rb jatuh tempo tgl 20", "servis motor kemarin ganti oli 80rb", "target nabung liburan 5jt", "catat anak udah bisa jalan hari ini", "masukin kampas rem 150rb ke wishlist/prioritas belanja" — tutup balasanmu dengan SATU blok persis format ini (di baris baru, setelah teks normal, JANGAN taruh di tengah kalimat):
-[[ACTION]]{"type":"<salah satu: add_transaksi|add_tagihan|add_servis|add_target|add_catatan_anak|add_wishlist>","data":{...}}[[/ACTION]]
+- USUL AKSI (opsional): kalau dari obrolan JELAS user mau MENCATAT sesuatu yang konkret (bukan cuma nanya/curhat) — misal "catat aku abis beli bensin 50rb", "tambahin tagihan listrik 200rb jatuh tempo tgl 20", "servis motor kemarin ganti oli 80rb", "target nabung liburan 5jt", "catat anak udah bisa jalan hari ini", "masukin kampas rem 150rb ke wishlist/prioritas belanja" — tutup balasanmu dengan blok persis format ini (di baris baru, setelah teks normal, JANGAN taruh di tengah kalimat). Kalau user menyebut BEBERAPA item sekaligus (mis. daftar belanja, beberapa tagihan, rekap pengeluaran), buat SATU blok per item (masing-masing blok sendiri-sendiri, jangan digabung dalam satu JSON/array):
+[[ACTION]]{"type":"<salah satu: add_transaksi|add_tagihan|add_servis|add_target|add_catatan_anak|add_wishlist|add_piutang|add_utang|pay_tagihan|pay_piutang|add_titipan|add_renov_proyek|add_renov_item|add_stok_cobek>","data":{...}}[[/ACTION]]
   Field per tipe:
-  • add_transaksi: {type:"income"|"expense", amount:number, category:string, subcategory?:string, note?:string, date?:"YYYY-MM-DD"}
-  • add_tagihan: {name:string, amount:number, nextDue:"YYYY-MM-DD", freq?:"bulanan"|"tahunan"|"sekali", category?:string, note?:string}
+  • add_transaksi: {type:"income"|"expense", amount:number, category:string, subcategory?:string, note?:string, date?:"YYYY-MM-DD", accountName?:string (nama akun PERSIS seperti di daftar akun; isi kalau user menyebut sumber uangnya, mis. "dari BRI"/"pakai cash" — kalau tidak disebut, JANGAN menebak, kosongkan), ownerName?:string (HANYA pengeluaran, nama pemilik Dana Titipan kalau uang itu titipan/talangan orang lain, mis. "home in"; sistem yang menentukan potong porsi atau talangan, kamu cukup isi namanya)}
+  • add_tagihan: {name:string, amount:number, nextDue:"YYYY-MM-DD", freq?:"bulanan"|"tahunan"|"sekali", category?:string, note?:string, kind?:"tagihan"|"langganan", accountName?:string, ownerName?:string}
+  • add_piutang: {name:string (siapa yang meminjam uang dari user), amount:number, date?:"YYYY-MM-DD", dueDate?:"YYYY-MM-DD", note?:string} — HANYA mencatat catatan piutang, TIDAK membuat transaksi kas; kalau uangnya baru keluar, tambahkan add_transaksi terpisah
+  • add_utang: {name:string (siapa yang meminjamkan ke user), amount:number, jenis?:"kta"|"kartu_kredit"|"pinjol"|"pribadi"|"koperasi"|"lainnya", bunga?:number (%/tahun), cicilanBulanan?:number, date?:"YYYY-MM-DD", dueDate?:"YYYY-MM-DD", note?:string} — HANYA catatan utang, TIDAK membuat transaksi kas
+  • add_tagihan juga menerima projectName?:string (nama proyek renovasi PERSIS seperti daftar) dan itemName?:string (item RAB proyek itu) untuk menautkan tagihan ke proyek
+  • pay_tagihan: {name:string (nama tagihan/cicilan PERSIS dari daftar TAGIHAN AKTIF), date?:"YYYY-MM-DD" (tanggal bayar, default hari ini), amount?:number (HANYA utk tagihan jenis utang boleh beda dari cicilan)} — membayar tagihan lewat alur Bayar yang sama dengan tombol di aplikasi (transaksi pengeluaran + jadwal berikutnya). Tagihan yang sudah dibayar periode ini ditolak sistem
+  • pay_piutang: {name:string (nama peminjam PERSIS dari daftar PIUTANG), amount?:number (kosong = lunas penuh; isi = pelunasan sebagian), date?:"YYYY-MM-DD"} — uang diterima dari peminjam. Piutang hasil order Shop tidak bisa lewat sini
+  • add_titipan: {ownerName:string (pemilik dana titipan; nama baru otomatis dibuat), amount:number (pokok yang dititipkan/dikomit), date?:"YYYY-MM-DD", note?:string} — kalau pemilik sudah punya pokok, nilainya DIGANTI (bukan ditambah)
+  • add_renov_proyek: {name:string, rab?:number, klien?:string, lokasi?:string, note?:string, dana?:"pribadi"|"klien"}
+  • add_renov_item: {projectName:string (proyek yang sudah ada), name:string, harga:number, ukuran?:string, category?:string, accountName?:string, note?:string, tglBayar?:"YYYY-MM-DD"} — hanya menambah item RAB (belum dibayar)
+  • add_stok_cobek: {productName:string (nama produk Shop PERSIS dari daftar), qty:number, hargaBeli?:number (per unit), accountName?:string (isi HANYA kalau uang belanjanya keluar dari akun itu; wajib bersama hargaBeli), date?:"YYYY-MM-DD", note?:string} — menambah stok produk yang sudah ada; produk baru dibuat lewat aplikasi
   • add_servis: {vehicleName:string, item:string, cost:number, date?:"YYYY-MM-DD", km?:number, note?:string}
   • add_target: {name:string, amount:number, saved?:number, emoji?:string}
   • add_catatan_anak: {text:string, date?:"YYYY-MM-DD"}
   • add_wishlist: {name:string, price:number, cat?:"kebutuhan"|"keinginan", urgensi?:"mendesak"|"bisa_nunggu"|"nice_to_have", hargaNormal?:number (isi kalau lagi diskon, harus > price), sudahPunya?:boolean, sudahPunyaAlasan?:string} — INI CUMA nambah rencana belanja ke daftar Prioritas Belanja, BUKAN mencatat transaksi/pengeluaran nyata. Kalau user bilang sudah BELI barangnya (bukan sekadar berencana), pakai add_transaksi biasa, bukan add_wishlist.
-  JSON harus valid (pakai tanda kutip ganda, tanpa komentar, TANPA trailing comma). MAKSIMAL 1 blok ACTION per balasan. JANGAN pakai blok ini kalau user cuma nanya/minta saran/analisa — itu murni dijawab teks biasa. Data BELUM tersimpan begitu kamu kirim blok ini — sistem akan tampilkan tombol konfirmasi ke user dulu, jangan bilang "sudah kucatat" seolah-olah sudah pasti tersimpan, cukup bilang "cek & konfirmasi tombol di bawah ya". PENTING: kalimat "cek & konfirmasi tombol di bawah" HANYA boleh kamu tulis kalau blok [[ACTION]]...[[/ACTION]] beneran ada persis di balasanmu (lengkap dgn tag pembuka & penutup, JSON valid) — jangan pernah janji ada tombol kalau blok-nya nggak kamu sertakan, itu bikin user bingung karena tombolnya nggak akan muncul.
+  JSON harus valid (pakai tanda kutip ganda, tanpa komentar, TANPA trailing comma). MAKSIMAL 20 blok ACTION per balasan. Pelunasan/pembayaran HANYA lewat pay_tagihan/pay_piutang (satu aksi = satu tagihan/piutang). Pelunasan UTANG (Buku Utang) dan piutang order Shop TIDAK bisa lewat chat — arahkan user ke aplikasi. JANGAN pakai blok ini kalau user cuma nanya/minta saran/analisa — itu murni dijawab teks biasa. Data BELUM tersimpan begitu kamu kirim blok ini — sistem akan tampilkan tombol konfirmasi ke user dulu, jangan bilang "sudah kucatat" seolah-olah sudah pasti tersimpan, cukup bilang "cek & konfirmasi tombol di bawah ya". PENTING: kalimat "cek & konfirmasi tombol di bawah" HANYA boleh kamu tulis kalau blok [[ACTION]]...[[/ACTION]] beneran ada persis di balasanmu (lengkap dgn tag pembuka & penutup, JSON valid) — jangan pernah janji ada tombol kalau blok-nya nggak kamu sertakan, itu bikin user bingung karena tombolnya nggak akan muncul.
 
 DATA KEUANGAN BULAN INI (${new Date().toLocaleString('id-ID',{month:'long',year:'numeric'})}):
 Pemasukan: ${fmtFull(inc)} | Pengeluaran: ${fmtFull(exp)} | Bersih: ${fmtFull(inc-exp)} | Jumlah transaksi: ${txM.length}
 
 SALDO AKUN: ${accInfo}
+PEMILIK DANA TITIPAN (nama valid untuk ownerName): ${chatTitipanOwnerNames()}
 TAGIHAN/CICILAN AKTIF: ${billInfo}
 TARGET TABUNGAN: ${targetInfo}
 DANA PENDIDIKAN: ${eduFundInfo}
@@ -477,15 +530,21 @@ box.scrollTop=box.scrollHeight;
 return;
 }
 reply=r.text||'Maaf, coba lagi ya W!';
-const{text:cleanText,action,actionError}=extractChatAction(reply);
+const{text:cleanText,actions:chatActions,actionError,tooMany}=extractChatActions(reply);const action=chatActions[0]||null;
 D.chatHistory.push({role:'assistant',content:cleanText||reply});
 save();
 loading.remove();
 if(cleanText)box.innerHTML+=`<div class="chat-bubble ai">${escapeHtml(cleanText).replaceAll('\n','<br>')}</div>`;
 if(action){
-const actionId='a'+Date.now()+Math.floor(Math.random()*1000);
-_pendingChatActions[actionId]={type:action.type,data:action.data};
-box.innerHTML+=renderChatActionBubble(actionId,action.type,action.data);
+const _ids=[];
+chatActions.forEach((act,i)=>{
+const actionId='a'+Date.now()+i+Math.floor(Math.random()*1000);
+_ids.push(actionId);
+_pendingChatActions[actionId]={type:act.type,data:act.data};
+box.innerHTML+=renderChatActionBubble(actionId,act.type,act.data);
+});
+if(_ids.length>1)box.innerHTML+=renderChatActionAllBubble(_ids);
+if(actionError||tooMany)box.innerHTML+=`<div class="chat-bubble ai u-fs13 u-t2">⚠️ ${tooMany?'Terlalu banyak usulan dalam satu balasan (maks. '+CHAT_ACTION_MAX_PER_REPLY+'), sisanya diabaikan. ':''}${actionError?'Sebagian usulan datanya tidak terbaca dan dilewati. ':''}Cek daftar di atas, lalu minta ulang sisanya bila perlu.</div>`;
 }else if(actionError){
 box.innerHTML+=`<div class="chat-bubble ai" style="border:1px solid #ff5050">
         <div class="u-fw700" style="color:#ff5050">⚠️ Tombol konfirmasi gagal dibuat</div>

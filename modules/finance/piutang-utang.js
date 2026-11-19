@@ -263,7 +263,7 @@ const _entrySesiCascade=({
 id:uid(),
 name:'Talangan Dana Titipan: '+ownerName,
 nilai:tx.amount,
-tanggal:todayStr(),
+tanggal:(typeof tx.date==='string'&&/^\d{4}-\d{2}-\d{2}/.test(tx.date))?tx.date.slice(0,10):todayStr(),// S2849: tanggal bayar transaksi, bukan hari input
 jatuhTempo:'',
 catatan:'Otomatis dari transaksi talangan Dana Titipan ('+(tx.note||'')+')',
 lunas:false,
@@ -299,6 +299,7 @@ return true;
 function removeUnpaidTitipanTalanganPiutangForTx(txId){
 if(!txId||!D.piutang||!D.piutang.length)return false;
 const before=D.piutang.length;
+if(typeof talanganPartialTxs==='function'&&typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT){D.piutang.filter(p=>p.autoTxId===txId&&!p.lunas).forEach(p=>talanganPartialTxs(p).forEach(t=>FinanceTxSOT.removeById(t.id)));}// S2849: pelunasan sebagian ikut hilang bila transaksi talangan dihapus (tanpa pemasukan yatim)
 BillDebtPiutangCanonicalWriter.removeByPredicate('piutang',p=>p.autoTxId===txId&&!p.lunas);
 const _removed=before-D.piutang.length;
 if(_removed>0&&typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"delete",auto:true,source:"titipan-talangan-removed",deletedTxId:txId});
@@ -481,8 +482,8 @@ const btn=document.getElementById('piutangLunasBtn');
 btn.textContent=Piutang._lunasState?'✓ Lunas':'Belum Lunas';
 btn.className='chip-btn'+(Piutang._lunasState?' active':'');
 },
-save(){if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;return withSaveGuard('piutang','piutangModal',Piutang._saveInner);},
-_saveInner(){
+save(){if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;return withSaveGuardAsync('piutang','piutangModal',Piutang._saveInner);},
+async _saveInner(){
 if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
 const _snap=_bdpAtomicSnapshot(['piutang','transactions']);
 const name=document.getElementById('piutangName').value.trim();
@@ -528,12 +529,26 @@ if(becameLunas&&p.linkedTxId&&!linkedPayoffTxId){
 const origTx=D.transactions.find(t=>sameId(t.id,p.linkedTxId));
 if(origTx)linkedPayoffTxId=createPiutangUtangAutoTx('income',nilai,origTx.accountId,'Piutang','Piutang lunas: '+name,todayStr());
 }
+// S2848: talangan titipan (autoTxId+autoTitipanOwnerId) diganti pemilik -> pemasukan NON-pribadi ke akun talangan; dibuka lagi -> pemasukan itu dibatalkan.
+if(p.autoTxId!=null&&p.autoTitipanOwnerId){if(becameLunas&&!linkedPayoffTxId&&typeof talanganPayoffCreate==='function'){linkedPayoffTxId=talanganPayoffCreate(p,p.nilai)||linkedPayoffTxId;}else if(p.lunas&&!Piutang._lunasState&&p.linkedPayoffTxId&&typeof talanganPayoffReverse==='function'){talanganPayoffReverse(p);linkedPayoffTxId=null;}}
 // S2726: piutang berasal dari penjualan Shop -> lunas = pemasukan kas (sama dgn BusinessFlowPresenter.markPaymentReceived); dibuka lagi = pemasukan dibatalkan.
 if(typeof recordShopReceivablePayoff==='function'&&typeof _shopReceivableOwner==='function'&&_shopReceivableOwner(p)){
 if(becameLunas&&!p.linkedTxId){const _r=recordShopReceivablePayoff(p,{amount:nilai});if(!_r.ok){toast(_r.reason==='ACCOUNT_MISSING'?'⚠️ Akun penerimaan order tidak ditemukan. Pelunasan tidak dicatat.':'⚠️ Pelunasan tidak dapat dicatat ('+_r.reason+')');return;}if(_r.txId)linkedPayoffTxId=_r.txId;}
 else if(p.lunas&&!Piutang._lunasState&&p.linkedPayoffTxId){reverseShopReceivablePayoff(p);linkedPayoffTxId=null;}
 }
 const _patch={name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState};
+// S2849: talangan titipan -> nilai = SISA. Lunas: nilai tidak diubah (pemasukan = sisa tersimpan, tak ada yang hilang/dobel); sudah lunas: nilai terkunci;
+// belum lunas + nilai turun: tanya apakah itu pelunasan sebagian (pemasukan non-pribadi sebesar selisih) atau hanya koreksi nilai.
+if(typeof talanganIsPiutang==='function'&&talanganIsPiutang(p)){
+const _oldN=Math.round(Number(p.nilai)||0);
+if(p.lunas||Piutang._lunasState){if(nilai!==_oldN)toast('ℹ️ Nilai piutang talangan yang lunas tidak diubah');_patch.nilai=_oldN;}
+else if(nilai<_oldN){
+const _d=_oldN-nilai;let _ch=1;
+if(typeof showChoiceModal==='function'){_ch=await showChoiceModal({title:'Nilai piutang talangan turun',message:'Nilai turun '+fmtFull(_d)+'. Catat sebagai pelunasan sebagian (pemasukan '+fmtFull(_d)+' ke akun talangan, bukan pendapatan pribadi)?',choices:[{label:'Ya, catat pelunasan sebagian'},{label:'Hanya koreksi nilai (tanpa pemasukan)'}]});}
+if(_ch===null||_ch===undefined)return;
+if(_ch===0&&typeof talanganPayoffCreate==='function'){if(!talanganPayoffCreate(p,_d)){toast('⚠️ Pelunasan sebagian tidak dapat dicatat');return;}}
+}
+}
 if(linkedPayoffTxId)_patch.linkedPayoffTxId=linkedPayoffTxId;else if(p.linkedPayoffTxId&&!p.linkedTxId&&!Piutang._lunasState)_patch.linkedPayoffTxId=null;
 BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,p0=>Object.assign(p0,_patch));
 _savedPiutangIdSesiC=p.id;
@@ -693,6 +708,15 @@ return `<div class="tx-item u-pointer" data-action="openPiutangModal" data-args=
 function isDebtOwnershipSelf(d){
 if(typeof OwnershipEngine==='undefined')return true;
 return OwnershipEngine.resolve(d).type==='SELF';
+}
+// S2842: utang "Dana titipan akun" (linkedAccountId, TitipanSync) milik akun yang SUDAH dikeluarkan dari totalSaldoAkun() (ownership non-SELF / includeInBalance=false)
+// tidak boleh memotong Kekayaan Bersih lagi (kurang-ganda; pola BUG-016). Akun SELF berporsi pemilik lain TETAP dihitung (saldo penuh masuk totalSaldoAkun, utang = porsi pemilik lain; lihat S675).
+function isDebtAkunLuarSaldo(d){
+if(!d||d.linkedAccountId==null||typeof sameId!=='function')return false;
+const a=(D.accounts||[]).find(x=>x&&sameId(x.id,d.linkedAccountId));
+if(!a)return false;
+if(a.includeInBalance===false)return true;
+return typeof isAccOwnershipSelf==='function'?!isAccOwnershipSelf(a):false;
 }
 const Debt={
 editId:null,
@@ -937,7 +961,7 @@ if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated"
 // Bersih (double-subtraction, lihat BUG-016). Entry ini TETAP tampil apa
 // adanya di Debt.renderList() (histori/badge "🔒 Titipan" tidak berubah)
 // -- cuma tidak ikut diakumulasi ke Total Utang/Kekayaan Bersih lagi.
-totalValue(){return(D.debts||[]).filter(isDebtOwnershipSelf).filter(d=>!d.lunas).filter(d=>!d.linkedAssetId&&!d.linkedInvestmentId).reduce((s,d)=>s+(d.nilai||0)*(resolveEntryAssetSelfPorsi(d)/100),0);},
+totalValue(){return(D.debts||[]).filter(isDebtOwnershipSelf).filter(d=>!d.lunas).filter(d=>!d.linkedAssetId&&!d.linkedInvestmentId).filter(d=>!isDebtAkunLuarSaldo(d)).reduce((s,d)=>s+(d.nilai||0)*(resolveEntryAssetSelfPorsi(d)/100),0);},
 totalCicilanBulanan(){return(D.debts||[]).filter(isDebtOwnershipSelf).filter(d=>!d.lunas).reduce((s,d)=>s+(d.cicilanBulanan||0),0);},
 // billCicilanAktif() — KW-170: cicilan barang aktif dari Buku Tagihan
 // (D.bills kind:'cicilan', sisaTenor>0) — dianggap "utang beneran": ikut
@@ -1086,7 +1110,8 @@ activeDebts(){
 // object utangnya sendiri (beda dari titipan aset yang sudah ditandai
 // linkedAssetId sejak awal), jadi salah masuk activeDebts() & ikut
 // disimulasikan snowball/avalanche padahal bukan kewajiban riil.
-const real=(D.debts||[]).filter(d=>!d.lunas&&(d.nilai||0)>0&&!d.linkedAssetId&&!d.linkedInvestmentId);
+// FIX (S2843): exclude JUGA entri "Dana titipan akun" (linkedAccountId, TitipanSync) -- bukan kewajiban yg dilunasi lewat strategi (bunga/cicilan 0, tanpa jatuh tempo); sama alasan linkedAssetId/linkedInvestmentId di atas. Debt.totalValue()/Buku Utang TIDAK diubah di sini.
+const real=(D.debts||[]).filter(d=>!d.lunas&&(d.nilai||0)>0&&!d.linkedAssetId&&!d.linkedInvestmentId&&!d.linkedAccountId);
 return real.concat(DebtStrategy.billCicilanAsDebtLike());
 },
 // billCicilanAsDebtLike() — KW-170: map cicilan barang aktif (Debt.

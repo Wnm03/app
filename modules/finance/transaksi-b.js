@@ -148,7 +148,8 @@ if(!ok)return;
 }
 }
 const editingId=txEditId;
-const existingTx=editingId?D.transactions.find(t=>t.id===editingId):null;
+const existingTx=editingId?D.transactions.find(t=>t.id===editingId):null;const _talOldAmtS2849=existingTx?existingTx.amount:0;// S2849
+if(existingTx&&typeof renovEnsureForTx==='function'&&!(await renovEnsureForTx(existingTx))){toast('⚠️ Modul Renovasi belum termuat; simpan dibatalkan. Coba lagi.');return;}if(typeof talanganRememberEditBase==='function')talanganRememberEditBase(existingTx);// S2851
 const existingBill=existingTx&&existingTx.billLinkId?D.bills.find(b=>b.id===existingTx.billLinkId):null;
 // S2777: validasi tautan Servis/Belanja Part SEBELUM mutasi apa pun -- simpan dibatalkan utuh
 // (bukan separuh: stok masuk tapi servis hilang diam-diam). Pesan menunjuk jalan keluar "belanja saja".
@@ -262,7 +263,7 @@ const oldAmount=existingTx.amount;
 Object.assign(existingTx,{amount:amt,category:cat,subcategory:subCat,accountId:accId,date,note});
 // S574-D1: persist deductionOwnerId di cabang utang (Object.assign 1/7) --
 // pola sama txAssetIdVal (tag opsional, bukan input kalkulasi saldo).
-if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
+if(existingTx.titipanTalangan===true&&existingTx.titipanLinkId)existingTx.deductionOwnerId=existingTx.titipanLinkId;else if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;if(typeof talanganSyncOnTxEdit==='function')talanganSyncOnTxEdit(existingTx,_talOldAmtS2849);
 const debtSynced=isLatestInstallment&&typeof syncDebtBalanceOnPaymentEdit==='function'&&syncDebtBalanceOnPaymentEdit(existingBill,oldAmount,amt);
 const debtSyncedMsg=debtSynced?' (sisa utang ikut disesuaikan)':'';
 txEditId=null;
@@ -292,7 +293,7 @@ const isLatestTagihan=typeof isLatestBillPaymentTx==='function'?isLatestBillPaym
 const keepPayMethodTagihan=_txPayMethodTouchedByUser?'tunai':(existingTx.payMethod||'tunai');
 Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:keepPayMethodTagihan,note,date});
 // S574-D1: persist deductionOwnerId di cabang tagihan (Object.assign 2/7).
-if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
+if(existingTx.titipanTalangan===true&&existingTx.titipanLinkId)existingTx.deductionOwnerId=existingTx.titipanLinkId;else if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;if(typeof talanganSyncOnTxEdit==='function')talanganSyncOnTxEdit(existingTx,_talOldAmtS2849);
 // billLinkId SENGAJA dipertahankan (tidak dihapus) -- beda dari cabang generik di bawah.
 let archiveSynced=false;
 if(isLatestTagihan&&linkedTagihanBill.completedAt){linkedTagihanBill.completedAt=date;archiveSynced=true;}
@@ -348,7 +349,7 @@ Object.assign(existingBill,{name:nama,amount:perBulanMine,nextDue:due,category:c
 if(typeof applyTxRenovBillItemChange==='function')applyTxRenovBillItemChange(existingBill); // S2827: ganti item RAB untuk pembayaran berikutnya
 Object.assign(existingTx,{amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
 // S574-D1: persist deductionOwnerId di cabang cicilan (isLatest, Object.assign 3/7).
-if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
+if(existingTx.titipanTalangan===true&&existingTx.titipanLinkId)existingTx.deductionOwnerId=existingTx.titipanLinkId;else if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;if(typeof talanganSyncOnTxEdit==='function')talanganSyncOnTxEdit(existingTx,_talOldAmtS2849);
 // FIX s286: sebelum ini, menyalakan Ditanggung Bersama + Catat Otomatis Piutang
 // saat EDIT transaksi cicilan yg sudah ada cuma nyimpen flag ke existingBill --
 // piutang utk PEMBAYARAN yg sedang diedit ini sendiri tidak pernah dibuat, baru
@@ -382,7 +383,7 @@ maybeCreateSharedPiutangFromBill(existingBill,existingTx.id);
 } else {
 Object.assign(existingTx,{category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
 // S574-D1: persist deductionOwnerId di cabang cicilan (bukan-latest, Object.assign 4/7).
-if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
+if(existingTx.titipanTalangan===true&&existingTx.titipanLinkId)existingTx.deductionOwnerId=existingTx.titipanLinkId;else if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;if(typeof talanganSyncOnTxEdit==='function')talanganSyncOnTxEdit(existingTx,_talOldAmtS2849);
 toast('ℹ️ Ini pembayaran cicilan lama — hanya catatan transaksi ini yang diubah. Jadwal cicilan (total/tenor/jatuh tempo) tidak ikut berubah, ubah lewat 📋 Riwayat Pembayaran kalau perlu.');
 }
 } else {
@@ -393,11 +394,11 @@ const due=document.getElementById('txLanggananDue').value||date;
 Object.assign(existingBill,{name:nama,amount:amt,freq,nextDue:due,category:cat,accountId:accId,note});
 Object.assign(existingTx,{amount:amt,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
 // S574-D1: persist deductionOwnerId di cabang tagihan-lama (isLatest, Object.assign 5/7).
-if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
+if(existingTx.titipanTalangan===true&&existingTx.titipanLinkId)existingTx.deductionOwnerId=existingTx.titipanLinkId;else if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;if(typeof talanganSyncOnTxEdit==='function')talanganSyncOnTxEdit(existingTx,_talOldAmtS2849);
 } else {
 Object.assign(existingTx,{amount:amt,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
 // S574-D1: persist deductionOwnerId di cabang tagihan-lama (bukan-latest, Object.assign 6/7).
-if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
+if(existingTx.titipanTalangan===true&&existingTx.titipanLinkId)existingTx.deductionOwnerId=existingTx.titipanLinkId;else if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;if(typeof talanganSyncOnTxEdit==='function')talanganSyncOnTxEdit(existingTx,_talOldAmtS2849);
 toast('ℹ️ Ini pembayaran tagihan lama — hanya catatan transaksi ini yang diubah, jadwal tagihan tidak ikut berubah.');
 }
 }
@@ -568,7 +569,9 @@ if(existingTx&&_wasServisTx&&!_isNowServisTx&&!_sameTaxonomy&&D.servisLogs){
  delete existingTx.servisLinkId;
 }
 // S574-D1: persist deductionOwnerId di cabang generik (Object.assign 7/7).
-if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
+// S2851: pembayaran tagihan (billLinkId) bertanda pemilik: dropdown kosong/tersembunyi (akun satu pemilik) BUKAN pilihan 'tanpa pemilik' -> tanda dipertahankan (dulu terhapus = jadi pengeluaran pribadi).
+if(existingTx.titipanTalangan===true&&existingTx.titipanLinkId)existingTx.deductionOwnerId=existingTx.titipanLinkId;else if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else if(!(typeof talanganKeepsOwnerOnEdit==='function'&&talanganKeepsOwnerOnEdit(existingTx)))delete existingTx.deductionOwnerId;
+if(typeof talanganAfterGenericEdit==='function')talanganAfterGenericEdit(existingTx);// S2851: pindah akun talangan <-> potong porsi
 // Toggle hitungKas: hanya ditulis/dipertahankan kalau payMethod HASIL edit ini
 // 'tunai' (keepPayMethod, sudah dihitung di atas) -- transaksi yang keepPayMethod-nya
 // balik ke cicilan/langganan (mis. bill-nya tidak aktif lagi tapi user re-pilih chip)
@@ -576,7 +579,7 @@ if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else dele
 // absen=true (default dihitung, 0 breaking change), jadi field HANYA ditulis saat
 // eksplisit false -- konsisten pola field opsional lain di cabang ini.
 if(keepPayMethod==='tunai'&&!hitungKasVal)existingTx.hitungKas=false;else delete existingTx.hitungKas;
-delete existingTx.billLinkId;
+if(!(typeof billLinkKeepOnGenericEdit==='function'&&billLinkKeepOnGenericEdit(existingTx,_txPayMethodTouchedByUser)))delete existingTx.billLinkId;// S2852: tautan tagihan dipertahankan bila tagihan masih ada
 if(existingTx.servisLinkId&&D.servisLogs){
 const linkedServis=D.servisLogs.find(s=>s.id===existingTx.servisLinkId);
 if(linkedServis)Object.assign(linkedServis,{cost:amt,date,accountId:accId});
