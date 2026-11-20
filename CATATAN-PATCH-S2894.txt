@@ -1,0 +1,41 @@
+PATCH KUMULATIF S2894 — basis: app-main (18) TANPA patch lain. Hasil: versi 2893 (kw-cache-v2893).
+Menggantikan & mengakumulasi rantai: presisi-porsi (2879) -> porsi-otomatis-saldo-bersih (2888) -> titipan-akun-pemilik (2890) -> S2893 (2891).
+Terapkan dengan menimpa file ke app-main (18). Hanya file yang berubah; file yatim modules/modals.js & modules/shop/modals.js
+tetap dihapus oleh build lewat DELETE-FILES.txt (sudah ada di basis).
+
+Tambahan sesi ini (di atas rantai):
+1) Label ganda "Pokok" di kartu pemilik: baris "Pokok Rp 9.616.338 -> Kini Rp 9.603.268" memakai pokok yang MASUK holding
+   (allocatedPrincipal), sedangkan kalimat status memakai pokok yang DIKOMIT. Baris & header tabel pemilik kini berlabel
+   "Masuk holding -> Kini". Hanya teks; angka & jalur data tidak berubah. Kalimat status & "Pokok Dikomit" tetap.
+   (dana-titipan-portfolio-render.js; tes baru tests/s2894-titipan-label-masuk-holding.test.js, 3 tes; tes s645 disesuaikan)
+2) styles.css: S2893 membuatnya 180.529 B (> budget 180.000 B, tes S1931/B7/S256AU gagal). Blok CSS S2893 dipadatkan tanpa
+   mengubah aturan, + 6 komentar verbose dipersingkat -> 179.884 B. Regex CSS di tes S2893 dibuat toleran spasi.
+   FILE-HASHES-SHA256.txt disinkronkan (scripts/refresh-file-hashes.py --write).
+3) Bundle dibangun ulang dari source gabungan (node scripts/build.js --require-minify), verify-bundle-freshness OK.
+
+4) tests/pencairan-income-average.test.js (3 tes yang tadinya gagal juga di app-main 18 polos): BUKAN bug aplikasi. Sandbox tes memakai
+   fallback new Date('YYYY-MM-DD') (UTC), sehingga transaksi "hari ini" dianggap masa depan di zona UTC+ sebelum jam offset (WIB < 07.00).
+   Produksi memakai getCachedTxDateMs (tanggal lokal). Tes kini menyuntik pembaca tanggal lokal yang sama; lulus di Jakarta, UTC,
+   Los_Angeles, Auckland, Kolkata. Kode aplikasi tidak diubah.
+
+Tes: suite penuh 10.172 tes, 10.171 lulus, 0 gagal (1 skip lama), dijalankan pada pohon hasil build; verify-bundle-freshness OK.
+Catatan: bila ZIP ditimpa ke app-main (18) lalu tes dijalankan SEBELUM build, S1780 & s1608 gagal karena dua file yatim di ZIP basis
+(modules/modals.js, modules/shop/modals.js); build menghapusnya lewat DELETE-FILES.txt.
+Browser (Chromium headless, 390px & 1100px, backup-resealed.json lewat applyRestoredData): 3 pemilik terbaca (renov/mas sihab/home in),
+kalimat renov = "Pokok Rp 11 jt, terpakai Rp 11,05 jt, kelebihan Rp 50 rb", baris = "Masuk holding Rp 9.616.338 -> Kini Rp 9.603.268",
+tanpa geser samping di 390px, 0 pageerror.
+Form Catat Pengeluaran Dana Titipan (backup yang sama): daftar pemilik 3 dari 6 (renov, mas sihab, home in); akun ikut pemilik terpilih
+(renov -> invest, mas sihab -> Saldo tagihan, home in -> BRI); pilihan akun manual tidak ditimpa lagi; 0 pageerror.
+Belum diuji: perangkat fisik, Service Worker aktif.
+Saran berikutnya: styles.css tinggal ~116 B dari budget 180.000 B; sebelum menambah CSS lagi, pindahkan blok per-domain ke file CSS terpisah
+atau naikkan budget secara sadar (tes S1931, B7).
+
+=== TAMBAHAN S2895 (kumulatif di atas S2894; patch ini menggantikan S2894) ===
+Dari audit browser Dana Titipan + holding (temuan 1, 2, 4). Versi tetap kw-cache-v2893 (sama dengan S2894).
+1) Porsi holding kini dibulatkan: "84,33%" (bukan 84.32566907725582%). Helper _pctText() di dana-titipan-portfolio-render.js, dipakai di baris flat & tabel modern. Data/agregasi tidak diubah.
+2) Kalimat status pemilik tanpa Pokok: "Pokok belum dicatat, terpakai Rp 4,31 jt dari transaksi BRI" (memakai _expenseComparisonForOwner yang sudah ada; bila tidak ada pembanding / total 0, tetap "Pokok belum dicatat").
+3) Tap target: summary "Rincian angka", "Riwayat transaksi", "Detail lengkap", "+ Tautkan Aset Baru" diberi padding 14px (tinggi ~45px). 1 aturan CSS :is(...)>summary; 3 komentar CSS dipersingkat untuk menjaga budget. styles.css 179.971 B (sisa 29 B).
+4) Hasil ukur ulang di Chromium (390/320/1100 px, backup-resealed.json, klik tab Keuangan > Laporan > Dana Titipan): summary 45 px; tombol nama holding (tadinya 14 px) dan header grup kustodian (17 px) diberi padding 12px -> tidak ada tombol < 36 px; Porsi 84,33% / 15,67%; kalimat home in benar; tanpa geser samping, 0 pageerror.
+5) Temuan 3: holding tanpa pelacakan untung-rugi (Majoris dkk.) diberi keterangan "· tanpa pelacakan untung-rugi" (baris flat) / "tanpa pelacakan" (tabel modern). Hanya teks + class utilitas yang ada, 0 CSS baru.
+Tes: suite penuh 10.180 tes, 10.179 lulus, 0 gagal (1 skip lama); +8 tes baru di tests/s2895-titipan-porsi-pct-status-tap.test.js. Bundle dibangun ulang, verify-bundle-freshness OK, hash disinkronkan.
+Browser: Chromium headless (bukan perangkat fisik, Service Worker tidak aktif). Klik tombol aksi DIUJI lewat jalur asli (tombol Titipan di dashboard): Atur Pokok, Catat Pengembalian, Lepas Keterikatan (batal & konfirmasi: komitmen 2->1, kalimat status ikut berubah), klik nama holding dan Atur Porsi Aset: modal terbuka/tertutup, halaman tetap di Laporan > Dana Titipan, 0 pageerror. Aksi simpan di dalam modal belum diuji.

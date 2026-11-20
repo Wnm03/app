@@ -95,6 +95,37 @@ const DanaTitipanPortfolioPresenter = {
     return '';
   },
 
+  // S2895 — _pctText(n): porsi % dibulatkan max 2 desimal, koma Indonesia (84,33%). Hanya tampilan.
+  _pctText(n) {
+    const v = Math.round((Number(n) || 0) * 100) / 100;
+    return String(v).replace('.', ',') + '%';
+  },
+
+  // S2893 — _moneyShort(n): angka ringkas utk kalimat status ("Rp 11 jt", "Rp 11,05 jt", "Rp 50 rb"). Hanya tampilan; angka penuh tetap di "Detail lengkap".
+  _moneyShort(n) {
+    const v = Math.abs(Math.round(Number(n) || 0));
+    const trim = (x, d) => String(Math.round(x * Math.pow(10, d)) / Math.pow(10, d)).replace('.', ',');
+    if (v >= 1000000) return 'Rp ' + trim(v / 1000000, 2) + ' jt';
+    if (v >= 1000) return 'Rp ' + trim(v / 1000, 1) + ' rb';
+    return 'Rp ' + v;
+  },
+
+  // S2893 — _ownerStatusSentence(o): satu kalimat status per pemilik. terpakai = pokok - sisa (OK) atau pokok + kelebihan (OVER_ALLOCATED).
+  _ownerStatusSentence(o) {
+    if (!o || o.principalAmount === null || o.principalAmount === undefined) {
+      const cmp = o ? this._expenseComparisonForOwner(o) : null;
+      if (cmp && cmp.total > 0) return 'Pokok belum dicatat, terpakai ' + this._moneyShort(cmp.total) + ' dari transaksi ' + cmp.accountNames.join(', ');
+      return 'Pokok belum dicatat';
+    }
+    const pokok = Number(o.principalAmount) || 0;
+    const over = Number(o.overAllocatedAmount) || 0;
+    const terpakai = (o.allocationStatus === 'OVER_ALLOCATED') ? pokok + over : pokok - (Number(o.estimatedUnallocated) || 0);
+    let t = 'Pokok ' + this._moneyShort(pokok) + ', terpakai ' + this._moneyShort(terpakai);
+    if (over > 0) t += ', kelebihan ' + this._moneyShort(over);
+    else t += ', sisa ' + this._moneyShort(Math.max(0, pokok - terpakai));
+    return t;
+  },
+
   // _principalCell(o) — Sesi 485d: tampilkan "Pokok Dikomit" per owner.
   // "Belum dicatat" (BUKAN "Rp0") kalau owner ini belum punya record
   // commitment sama sekali (`principalAmount === null`, lihat build() S485c
@@ -607,9 +638,9 @@ const DanaTitipanPortfolioPresenter = {
       : `${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)}`;
     return `
             <div class="titipan-holding-row u-flex u-jcb u-fs11 u-mb2" data-linked-asset-id="${escapeHtml(assetId)}">
-              <span>${nameHtml} <span class="u-t2">(${hh.ownerPct}%)</span></span>
+              <span>${nameHtml} <span class="u-t2">(${this._pctText(hh.ownerPct)})</span></span>
               <span>${hh.hasGainTracking === false ? `
-                <span class="u-t2 money">Nilai: ${this._money(hh.currentValue)}</span>
+                <span class="u-t2 money">Nilai: ${this._money(hh.currentValue)}</span> <span class="u-t2 u-fs10">· tanpa pelacakan untung-rugi</span>
               ` : `
                 <span class="u-t2 money">${this._money(hh.allocatedPrincipal)} → ${this._money(hh.currentValue)}</span>
                 &nbsp;<span class="money ${this._gainCls(hh.gain)}">${this._gainMoney(hh.gain)}</span>
@@ -718,13 +749,13 @@ const DanaTitipanPortfolioPresenter = {
       ? `<button type="button" class="tx-tbl-name-btn" data-action="DanaTitipanCommitmentUI.openAssetPorsiDirect" data-args="${escapeHtml(JSON.stringify([assetId]))}" aria-label="Atur porsi aset ${escapeHtml(hh.name)}">${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)}</button>`
       : `${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)}`;
     const valCell = hh.hasGainTracking === false
-      ? `<span class="money">${this._money(hh.currentValue)}</span>`
+      ? `<span class="money">${this._money(hh.currentValue)}</span> <span class="u-t2 u-fs10">tanpa pelacakan</span>`
       : `<span class="money">${this._money(hh.currentValue)}</span> <span class="money ${this._gainCls(hh.gain)}">${this._gainMoney(hh.gain)}</span>`;
     return `
             <tr class="tx-tbl-row" data-linked-asset-id="${escapeHtml(assetId)}">
               <td>${nameHtml}</td>
               <td class="num">${valCell}</td>
-              <td class="num money">${hh.ownerPct}%</td>
+              <td class="num money">${this._pctText(hh.ownerPct)}</td>
             </tr>
           `;
   },
@@ -760,8 +791,9 @@ const DanaTitipanPortfolioPresenter = {
           <summary class="u-flex u-jcb u-fs12 u-pointer titipan-summary-sticky">
             <span class="titipan-owner-avatar" data-owner-initial="${initial}" aria-hidden="true"></span>
             <span>${o.allocationStatus === 'OVER_ALLOCATED' ? '⚠️ ' : ''}👤 ${escapeHtml(o.ownerName)}</span>
+            <span class="titipan-status-line u-fs11 ${o.allocationStatus === 'OVER_ALLOCATED' ? 'red' : 'u-t2'}">${escapeHtml(this._ownerStatusSentence(o))}</span>
             <span>
-              <span class="u-t2">Pokok</span> <span class="u-fw700 money">${this._money(o.allocatedPrincipal)}</span>
+              <span class="u-t2">Masuk holding</span> <span class="u-fw700 money">${this._money(o.allocatedPrincipal)}</span>
               &nbsp;→&nbsp;
               <span class="u-t2">Kini</span> <span class="u-fw700 money">${this._money(o.currentValue)}</span>
               &nbsp;<span class="u-fw700 money ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
@@ -864,8 +896,8 @@ const DanaTitipanPortfolioPresenter = {
         </tr>
       `).join('');
     return `
-      <div class="tx-tbl-wrap"><table class="tx-tbl">
-        <thead><tr><th>Pemilik</th><th class="num">Pokok → Kini</th><th class="num">±</th></tr></thead>
+      <div class="tx-tbl-wrap"><table class="tx-tbl titipan-owner-tbl">
+        <thead><tr><th>Pemilik</th><th class="num">Masuk holding → Kini</th><th class="num">±</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
     `;
@@ -1006,10 +1038,13 @@ const DanaTitipanPortfolioPresenter = {
     if (status === 'NOT_MIGRATED') {
       const btn = hasPoolUI ? '<button type="button" class="btn btn-ghost btn-full btn-sm u-mt8" data-action="DanaTitipanPoolUI.openSetSaldoAwal">Set Saldo Awal Dana Titipan</button>' : '';
       return `${wrapOpen}
+        <div class="titipan-pool-sentence u-fw700">${escapeHtml('Dana masuk belum diset, sudah dialokasikan ' + this._moneyShort(sudahDialokasikan))}</div>
+        <details class="titipan-pool-detail u-mt4"><summary class="u-fs11 u-t2 u-pointer">Rincian angka</summary>
         <div class="titipan-card-hero"><span class="titipan-pool-lbl">👥 Sudah Dialokasikan</span><span class="titipan-pool-amt">${this._money(sudahDialokasikan)}</span></div>
         <div class="titipan-pool-row"><span class="u-t2">💰 Dana Titipan Masuk</span><span class="u-fw700">Belum diset</span></div>
         <div class="u-fs10 u-t2 u-mt4">📋 Status: Data lama / belum dimigrasikan</div>
         ${hint}
+        </details>
         ${btn}
       </div>`;
     }
@@ -1019,11 +1054,14 @@ const DanaTitipanPortfolioPresenter = {
     if (status === 'OVER_ALLOCATED') {
       const lebih = DanaTitipanPoolAPI.overAllocatedAmount();
       return `${wrapOpen}
+        <div class="titipan-pool-sentence u-fw700 red">${escapeHtml('Masuk ' + this._moneyShort(masuk) + ', dialokasikan ' + this._moneyShort(sudahDialokasikan) + ', melebihi pool ' + this._moneyShort(lebih))}</div>
+        <details class="titipan-pool-detail u-mt4"><summary class="u-fs11 u-t2 u-pointer">Rincian angka</summary>
         <div class="titipan-card-hero"><span class="titipan-pool-lbl">💰 Dana Titipan Masuk</span><span class="titipan-pool-amt">${this._money(masuk)}</span></div>
         <div class="titipan-pool-row"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
         <div class="titipan-pool-row"><span class="u-t2">🔴 Alokasi melebihi pool</span><span class="titipan-over-badge red">${this._money(lebih)}</span></div>
         <div class="titipan-pool-row"><span class="u-t2">Belum Dialokasikan</span><span class="u-fw700">${this._money(0)}</span></div>
         ${hint}
+        </details>
         ${btn}
       </div>`;
     }
@@ -1031,10 +1069,13 @@ const DanaTitipanPortfolioPresenter = {
     // status === 'OK'
     const sisa = DanaTitipanPoolAPI.sisaAlokasi();
     return `${wrapOpen}
+      <div class="titipan-pool-sentence u-fw700">${escapeHtml('Masuk ' + this._moneyShort(masuk) + ', dialokasikan ' + this._moneyShort(sudahDialokasikan) + ', sisa ' + this._moneyShort(sisa))}</div>
+      <details class="titipan-pool-detail u-mt4"><summary class="u-fs11 u-t2 u-pointer">Rincian angka</summary>
       <div class="titipan-card-hero"><span class="titipan-pool-lbl">💰 Dana Titipan Masuk</span><span class="titipan-pool-amt">${this._money(masuk)}</span></div>
       <div class="titipan-pool-row"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
       <div class="titipan-pool-row"><span class="u-t2">🟢 Belum Dialokasikan</span><span class="u-fw700 green">${this._money(sisa)}</span></div>
       ${hint}
+      </details>
       ${btn}
     </div>`;
   },

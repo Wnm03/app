@@ -131,7 +131,7 @@ test('onOwnerNominalInput() -> saveOwners() -> _renderOwnersList(): Nominal manu
   assert.ok(Math.abs(nominalTampil - 1700000) <= 20, `Nominal (Rp) baris 0 setelah Simpan Porsi harus dekat dgn 1.700.000 (toleransi pembulatan rupiah), didapat ${nominalTampil}`);
 });
 
-test('onOwnerNominalInput(): presisi konversi porsi 4 desimal (bukan lagi 2 desimal)', () => {
+test('onOwnerNominalInput(): presisi konversi porsi 10 desimal (S2846: nominal Rp harus bulat balik)', () => {
   const D = makeD(11700000);
   const dom = makeStatefulDom();
   const ctx = makeCtx(D, dom);
@@ -144,7 +144,8 @@ test('onOwnerNominalInput(): presisi konversi porsi 4 desimal (bukan lagi 2 desi
   const porsi = ctx.Aset._ownersDraft[0].porsi;
   // 1700000/11700000*100 = 14.5299145299...% -> dgn presisi 4 desimal
   // harus 14.5299, BUKAN kebulat ke 14.53 (2 desimal, perilaku lama).
-  assert.equal(porsi, 14.5299, 'porsi harus disimpan dgn presisi 4 desimal, bukan 2 desimal (fix S457)');
+  assert.equal(porsi, 14.5299145299, 'porsi disimpan dgn presisi 10 desimal (S2846; sebelumnya 4 desimal -> nominal meleset beberapa rupiah)');
+  assert.equal(Math.round(11700000 * porsi / 100), 1700000, 'nominal harus bulat balik persis');
 });
 
 test('_applyRemainingShare(): share baris lain (via calculateRemainingShare()) juga pakai presisi 4 desimal, total tetap PERSIS 100% (dulu _autoDistributeRemaining(), DIHAPUS sesi AF1)', () => {

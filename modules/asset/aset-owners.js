@@ -368,10 +368,10 @@ const n=Aset._ownersDraft.length;
 let acc=0;
 Aset._ownersDraft.forEach((o,k)=>{
 let tambahan;
-if(k===n-1){tambahan=Math.round((removedPorsi-acc)*10000)/10000;}
-else{tambahan=Math.round((removedPorsi/n)*10000)/10000;acc+=tambahan;}
+if(k===n-1){tambahan=Math.round((removedPorsi-acc)*1e10)/1e10;}
+else{tambahan=Math.round((removedPorsi/n)*1e10)/1e10;acc+=tambahan;}
 const cur=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;
-o.porsi=Math.round((cur+tambahan)*10000)/10000;
+o.porsi=Math.round((cur+tambahan)*1e10)/1e10;
 });
 }
 Aset._renderOwnersList();
@@ -437,7 +437,7 @@ const quotaPorsi=sisaRp/nilai*100;
 const otherTotal=draft.reduce((sum,row,k)=>k===i?sum:sum+(typeof row.porsi==='number'&&isFinite(row.porsi)?row.porsi:0),0);
 const remainingPorsi=Math.max(0,100-otherTotal);
 const capped=Math.min(quotaPorsi,remainingPorsi);
-return Math.round(Math.max(0,capped)*10000)/10000;
+return Math.round(Math.max(0,capped)*1e10)/1e10;
 },
 applyQuotaToRow(i){
 if(Aset._ownersReadOnly)return;
@@ -496,7 +496,7 @@ Aset.updateOwnersTotal();
 Aset._ownersDraft.forEach((o,k)=>{ Aset._updateOwnerQuotaDisplay(k); });
 return;
 }
-const porsi=Math.round((nominal/nilai*100)*10000)/10000;
+const porsi=Math.round((nominal/nilai*100)*1e10)/1e10;
 Aset._ownersDraft[i].porsi=porsi;
 const porsiEl=document.getElementById('ownerPorsi'+i);
 if(porsiEl)porsiEl.value=porsi;
@@ -638,7 +638,7 @@ const domNominal=n;
 const porsiSaatIni=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;
 const nominalTersirat=Math.round(nilai*porsiSaatIni/100);
 if(domNominal===nominalTersirat)return;
-const porsiBaru=Math.round((domNominal/nilai*100)*10000)/10000;
+const porsiBaru=Math.round((domNominal/nilai*100)*1e10)/1e10;
 o.porsi=porsiBaru;
 });
 },

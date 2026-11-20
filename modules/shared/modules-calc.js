@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2878';
+const MODULE_CALC_VERSION='s2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2896';
 // S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
 // fallback so this file remains independently loadable in focused tests/legacy builds.
 function _calcTxDateMs(t){
@@ -1172,7 +1172,7 @@ function calculateRemainingShare(rows, editedIndex) {
     if (k === targetIndex || !rows[k]) continue;
     totalOther += typeof rows[k].porsi === 'number' && isFinite(rows[k].porsi) ? rows[k].porsi : 0;
   }
-  const sisa = Math.round(Math.max(0, 100 - totalOther) * 10000) / 10000;
+  const sisa = Math.round(Math.max(0, 100 - totalOther) * 1e10) / 1e10;
   if (sisa <= 0) return null;
   return { targetIndex, porsi: sisa };
 }

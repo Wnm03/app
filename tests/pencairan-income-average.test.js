@@ -7,6 +7,8 @@ const {loadSource}=require('./helpers/loadSource');
 const pad=(n)=>String(n).padStart(2,'0');
 const ymd=(d)=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const NOW=new Date(),TODAY=ymd(NOW),MONTH=NOW.getMonth(),YEAR=NOW.getFullYear();
+// 'YYYY-MM-DD' dibaca LOKAL seperti getCachedTxDateMs produksi; fallback new Date(str) membaca UTC -> tes flaky di zona UTC+ sebelum jam offset.
+const _tzSafeMs=(t)=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(t&&t.date);return m?new Date(+m[1],+m[2]-1,+m[3]).getTime():new Date(t&&t.date).getTime();};
 const acc=[{id:'a1',ownership:'SELF',includeInBalance:true}];
 // RAB 200, DP 200, biaya 120 -> LabaMaks 80. Semua tanggal = hari ini supaya masuk jendela.
 function fixture({cairkan=0,dana='klien',extraTx=[],fisik=1000}={}){
@@ -54,7 +56,7 @@ test('kalibrasi cash-projection: realisasi memasukkan pencairan bulan itu',()=>{
 function forecast(f,opts){
  const x=ctxFor(f);
  const c=loadSource(['modules/finance/tx-list-cashflow.js'],{D:f.D,BudgetReko:{monthsAvailable:()=>1,effectiveMonths:()=>1,rangeFrom:()=>new Date(YEAR,MONTH,1)},
-  totalSaldoAkun:()=>1000,recalcAccBalance:()=>1000,saldoPribadiSafe:f.r.saldoPribadi,save:()=>{},isAliranKlienSafe:f.r.isAliranKlien,pencairanKlienRentangSafe:x.pencairanKlienRentangSafe,_ymdLocal:x._ymdLocal});
+  totalSaldoAkun:()=>1000,recalcAccBalance:()=>1000,saldoPribadiSafe:f.r.saldoPribadi,save:()=>{},isAliranKlienSafe:f.r.isAliranKlien,pencairanKlienRentangSafe:x.pencairanKlienRentangSafe,_ymdLocal:x._ymdLocal,getCachedTxDateMs:_tzSafeMs});
  return c.computeCashflowForecast(opts);
 }
 test('forecast incAvg: gaji + pencairan; DP klien tetap keluar; ',()=>{
@@ -94,7 +96,7 @@ test('dana tertahan > saldo fisik: saldo pribadi negatif apa adanya (tidak di-cl
  const f=fixture({cairkan:0,fisik:50});
  const x=ctxFor(f);
  const c=loadSource(['modules/finance/tx-list-cashflow.js'],{D:f.D,BudgetReko:{monthsAvailable:()=>1,effectiveMonths:()=>1,rangeFrom:()=>new Date(YEAR,MONTH,1)},
-  totalSaldoAkun:()=>50,recalcAccBalance:()=>50,saldoPribadiSafe:f.r.saldoPribadi,save:()=>{},isAliranKlienSafe:f.r.isAliranKlien,pencairanKlienRentangSafe:x.pencairanKlienRentangSafe,_ymdLocal:x._ymdLocal});
+  totalSaldoAkun:()=>50,recalcAccBalance:()=>50,saldoPribadiSafe:f.r.saldoPribadi,save:()=>{},isAliranKlienSafe:f.r.isAliranKlien,pencairanKlienRentangSafe:x.pencairanKlienRentangSafe,_ymdLocal:x._ymdLocal,getCachedTxDateMs:_tzSafeMs});
  const r=c.computeCashflowForecast({months:1,from:new Date(YEAR,MONTH,1)});
  assert.equal(r.saldoNow,-30);assert.equal(r.danaKlienTertahan,80);
 });

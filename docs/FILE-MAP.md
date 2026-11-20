@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-11-19T11:03:17.539Z
-Total file source: 486 · Total identifier global: 18597
+Terakhir digenerate: 2026-11-20T00:28:26.108Z
+Total file source: 486 · Total identifier global: 18627
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -23,7 +23,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 |---|------|------:|-----------|
 | 1 | `modules/shared/pwa-ux-performance.js` | 738 | _(tidak ada komentar header)_ |
 | 2 | `modules/shared/pwa-production-hardening.js` | 70 | _(tidak ada komentar header)_ |
-| 3 | `modules/shared/modules-render.js` | 1488 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
+| 3 | `modules/shared/modules-render.js` | 1491 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
 | 4 | `modules/shared/modules-render-b.js` | 1420 | _(tidak ada komentar header)_ |
 | 5 | `modules/shared/modals.js` | 33 | S1904 compatibility contract: Kategori Servis (SOT) dan Komponen Servis (SOT) adalah selector canonical. Modal HTML dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modals.js … |
 | 6 | `modules/shared/select-search.js` | 279 | _(tidak ada komentar header)_ |
@@ -89,7 +89,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 66 | `modules/shared/scan-ocr.js` | 1152 | Scan struk belanja (OCR): struk belanja, bukti transfer, tanggal dari foto, odometer, portofolio aset, kategori & sparepart otomatis dari struk Dipindah ke modules/shared/scan-ocr.js (Sesi 17-18 restrukturisasi folder — … |
 | 67 | `modules/shared/scan-ocr-b.js` | 646 | bagian KEDUA dari modules/shared/scan-ocr.js (audit ukuran file, sesi lanjutan setelah split transaksi.js). Titik potong bersih: TEPAT SETELAH `function scanBillMultiItems(){return BillMultiScan.scan();}` (di depan … |
 | 68 | `modules/finance/filter-laporan.js` | 639 | Filter transaksi/keuangan (panel filter Keuangan & Laporan), pencarian, paginasi list transaksi, navigasi antar-list (goToList/showFilteredTx) |
-| 69 | `modules/finance/akun.js` | 1267 | Kelola Akun (Cash/Bank/Ewallet dll): saldo, filter dropdown akun di seluruh app, CRUD akun Dipindah ke modules/finance/akun.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
+| 69 | `modules/finance/akun.js` | 1290 | Kelola Akun (Cash/Bank/Ewallet dll): saldo, filter dropdown akun di seluruh app, CRUD akun Dipindah ke modules/finance/akun.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 70 | `modules/business/gaji-calc.js` | 59 | Kalkulator gaji harian/borongan (Tukang & karyawan lepas), catat sbg pemasukan Dipindah ke modules/business/gaji-calc.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 71 | `modules/business/gaji-bulanan.js` | 93 | Sesi "Bulanan Tetap" (D.profile.tipeGaji==='bulananTetap'): catat gaji bulanan flat (D.profile.gajiBulananTetap) sbg 1 transaksi income, tanggal dikunci ke tanggal gajian tetap (D.profile.gajiBulananTanggal, 1-31) bulan … |
 | 72 | `modules/finance/cicilan.js` | 143 | logika form Cicilan pada txModal (Tambah/Edit Transaksi Keuangan). Dipindah ke modules/finance/cicilan.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
@@ -427,11 +427,11 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 404 | `modules/finance/dana-titipan-pool-api.js` | 212 | Dana Titipan: Pool (dana masuk aktual), entitas BARU terpisah dari `D.titipanCommitments[]` (porsi/alokasi per owner, sudah ada). Lihat `MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md` §5 (New Data Model), §14 (API … |
 | 405 | `modules/finance/dana-titipan-aggregation-api.js` | 1235 | Dana Titipan dalam Investasi: Portfolio Allocation Projection (Sesi 484 + Sesi 485a-e + Sesi 486 + Sesi 499/B1 + Sesi B2 + Sesi E + Sesi 554 + Sesi 594). SESI R5 — REALISASI (sesi ini, menggantikan percobaan split … |
 | 406 | `modules/finance/dana-titipan-commitment-return-api.js` | 320 | Dana Titipan: CRUD Commitment (pokok dikomit manual per owner, Sesi 485b/523) + CRUD Return (Sesi 486). SESI R5 — REALISASI (sesi ini). PECAHAN KEDUA dari `dana-titipan-portfolio-presenter.js` (versi produksi s597) — … |
-| 407 | `modules/finance/dana-titipan-portfolio-render.js` | 1464 | Dana Titipan: render/UI (`DanaTitipanPortfolioPresenter`, `DanaTitipanCommitmentUI`, `DanaTitipanReturnUI`), termasuk baris pembanding otomatis "Estimasi dari Transaksi <Akun>" (`_expenseComparisonForOwner()`, Sesi … |
+| 407 | `modules/finance/dana-titipan-portfolio-render.js` | 1505 | Dana Titipan: render/UI (`DanaTitipanPortfolioPresenter`, `DanaTitipanCommitmentUI`, `DanaTitipanReturnUI`), termasuk baris pembanding otomatis "Estimasi dari Transaksi <Akun>" (`_expenseComparisonForOwner()`, Sesi … |
 | 408 | `modules/shared/realokasi-sisa-kuota.js` | 174 | RealokasiSisaKuota (SESI FIX-2026-09-01, fitur "🔀 Alihkan sisa kuota titipan ke aset lain"): 1 owner titipan sering punya pokok yang BELUM habis teralokasi ke 1 instrumen (mis. pokok Rp11jt, holding cuma py ruang … |
 | 409 | `modules/finance/dana-titipan-portfolio-render-b.js` | 578 | bagian KEDUA dari modules/finance/dana-titipan-portfolio-render.js (audit ukuran file, sesi lanjutan setelah split scan-ocr.js). Titik potong bersih: TEPAT SETELAH penutup object `DanaTitipanPortfolioPresenter` (`};`), … |
 | 410 | `modules/finance/titipan-expense-flow.js` | 289 | Sesi 521 (S521-A, implementasi Design Lock DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md, baseline v1251/S519). Scope: flow pencatatan pengeluaran Dana Titipan (single-owner & multi-owner) yang dipanggil dari modal khusus … |
-| 411 | `modules/finance/titipan-expense-ui.js` | 450 | Sesi 521 (S521-B2, UI ONLY, DESIGN-S520-DANA- TITIPAN-UI-MULTIOWNER.md, baseline v1251/S519 + S521-A/S521-B1). Scope: SATU-SATUNYA hal baru di sesi ini adalah `TitipanExpenseUI` — controller DOM tipis buat modal … |
+| 411 | `modules/finance/titipan-expense-ui.js` | 536 | Sesi 521 (S521-B2, UI ONLY, DESIGN-S520-DANA- TITIPAN-UI-MULTIOWNER.md, baseline v1251/S519 + S521-A/S521-B1). Scope: SATU-SATUNYA hal baru di sesi ini adalah `TitipanExpenseUI` — controller DOM tipis buat modal … |
 | 412 | `modules/vehicle/ride-activity-metrics.js` | 385 | RideActivityMetrics (S522, "Ride Activity Metrics Foundation"). HARD SCOPE sesi ini: PURE deterministic math functions saja — fondasi buat Ride Activity GPS recorder yang akan dibangun sesi-sesi berikutnya (S523+). … |
 | 413 | `modules/vehicle/ride-gps-recorder.js` | 326 | RideGpsRecorder (S523, "GPS Recorder + Permission Foundation"). HARD SCOPE sesi ini: PRODUCER trackpoint via browser Geolocation API + lifecycle permission/start/pause/resume/stop yang deterministic. File ini TIDAK … |
 | 414 | `modules/vehicle/ride-storage.js` | 569 | RideStorage (S524, "Ride Storage & Recovery Foundation"). HARD SCOPE sesi ini: persistence layer IndexedDB murni buat menyimpan & memulihkan ride recording — TIDAK mengubah GPS recorder (S523, ride-gps-recorder.js), … |
@@ -466,7 +466,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 443 | `modules/finance/finance-allocation-api.js` | 267 | modules/finance/finance-allocation-api.js — Salary Protection & Surplus Allocation S2601: orchestration READ-ONLY di atas API keuangan yang sudah ada. Tidak membuat transaksi, tidak mengubah saldo/schema/storage, tidak … |
 | 444 | `modules/dashboard-hub/dashboard-hub-overview.js` | 352 | Pusat Pantau Beranda (tab Ringkasan Dashboard Hub). TUJUAN: Beranda harus INFORMATIF lintas domain. Sebelumnya tab Ringkasan hanya berisi "Ownership Summary" (hitungan entitas, bukan insight) sementara … |
 | 445 | `modules/shared/boot-early.js` | 246 | modules/shared/boot-early.js SA10a (v1568) — konsolidasi 4 blok <script> inline paling awal di index.html/app_production.html (sebelum <script src="...bundle-load- guard.js" data-guard-src="app-bundle-a.min.js">) jadi 1 … |
-| 446 | `modules/home/renovasi.js` | 1061 | Domain Proyek Renovasi: RenovCalc (kalkulator material), Renov (proyek & item biaya), RenovAI (saran AI kebutuhan/ukuran) Dipindah ke modules/home/renovasi.js (Sesi 13 restrukturisasi folder — lihat docs/FILE-MAP.md & … |
+| 446 | `modules/home/renovasi.js` | 1063 | Domain Proyek Renovasi: RenovCalc (kalkulator material), Renov (proyek & item biaya), RenovAI (saran AI kebutuhan/ukuran) Dipindah ke modules/home/renovasi.js (Sesi 13 restrukturisasi folder — lihat docs/FILE-MAP.md & … |
 | 447 | `modules/business/sewakios.js` | 266 | Domain Sewa Kios: catat unit kios yang disewakan, riwayat tagihan sewa, ROI vs modal renovasi, laporan PDF. Dipindah ke modules/business/sewakios.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & … |
 | 448 | `modules/shop/business-intelligence-presenter.js` | 563 | modules/shop/business-intelligence-presenter.js — Business Intelligence Presenter (Sesi 251, lanjutan tab "🧠 Business Intelligence" Shop yang dibuat Sesi 250, lihat docs/SESI-250-BUSINESS-INTELLIGENCE-MIGRATION.md). … |
 | 449 | `modules/asset/format-tema.js` | 216 | Domain Format Angka & Tema: format rupiah singkat (fmt, mis. "Rp 1.5 jt"), Dipindah ke modules/shared/format-tema.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
@@ -1302,6 +1302,15 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_ongkirN` | `modules/business/kasir.js` |
 | `_onTxShopSaleItemChangeInner` | `modules/shop/cobek-tx-cart.js` |
 | `_onTxShopStockItemChangeInner` | `modules/shop/cobek-tx-cart.js` |
+| `_opaBusy` | `modules/finance/akun.js` |
+| `_opaDeltas` | `modules/finance/akun.js` |
+| `_opaLastErr` | `modules/finance/akun.js` |
+| `_opaOwnerKey` | `modules/finance/akun.js` |
+| `_opaSt` | `modules/shared/modules-render.js` |
+| `_opaStatus` | `modules/finance/akun.js` |
+| `_opaSyncAll` | `modules/finance/akun.js` |
+| `_opaSyncOne` | `modules/finance/akun.js` |
+| `_opaTargets` | `modules/finance/akun.js` |
 | `_openDialogOverlay` | `modules/shared/modal-navigasi.js` |
 | `_openDialogOverlay` | `modules/asset/modal-navigasi.js` |
 | `_openOverlays` | `modules/shared/modal-navigasi.js` |
@@ -1337,7 +1346,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_paymentAtomic` | `modules/finance/tagihan-kalender.js` |
 | `_paymentAtomicCommitted` | `modules/finance/tagihan-kalender.js` |
 | `_paymentBadge` | `modules/shop/cobek-order.js` |
-| `_payTxId` | `modules/finance/tagihan-kalender.js` |
 | `_pc` | `modules/finance/edukasi-dana.js` |
 | `_pendingChatActions` | `modules/ai/chat-action.js` |
 | `_pendingRemove` | `modules/finance/transaksi-b.js` |
@@ -1981,6 +1989,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `acc` | `modules/finance/finance-intelligence.js` |
 | `acc` | `modules/finance/financial-audit-engine.js` |
 | `acc` | `modules/finance/titipan-reconcile.js` |
+| `acc` | `modules/finance/titipan-expense-ui.js` |
 | `acc` | `modules/vehicle/ride-activity-metrics.js` |
 | `acc` | `modules/home/renovasi.js` |
 | `accA` | `modules/shared/self-test-cases-a.js` |
@@ -2120,6 +2129,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `active` | `modules/dashboard-hub/dashboard-insight-dedup.js` |
 | `active` | `modules/shop/business-flow-presenter-inventory.js` |
 | `active` | `modules/shop/business-flow-presenter.js` |
+| `active` | `modules/finance/titipan-expense-ui.js` |
 | `active` | `modules/finance/finance-cross-entity-atomic.js` |
 | `active` | `modules/dashboard-hub/dashboard-hub-overview.js` |
 | `active` | `modules/asset/modal-navigasi.js` |
@@ -2384,6 +2394,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `allowed` | `modules/dashboard-hub/dashboard-hub.js` |
 | `allowed` | `modules/shop/shop-sot-governance.js` |
 | `ALLOWED_JSON` | `modules/shared/pwa-production-hardening.js` |
+| `allOwners` | `modules/finance/titipan-expense-ui.js` |
 | `allPromise` | `modules/vehicle/vehicle-sot-provisioning.js` |
 | `allReceived` | `modules/shop/business-flow-presenter-inventory.js` |
 | `allReminders` | `modules/vehicle/fuel-intelligence-engine.js` |
@@ -2481,6 +2492,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `anomalyNote` | `modules/shared/modules-render.js` |
 | `anuitas` | `modules/finance/edukasi-dana.js` |
 | `aNull` | `modules/vehicle/fuel-compare.js` |
+| `any` | `modules/finance/titipan-expense-ui.js` |
 | `any` | `modules/shared/a11y-action-controls.js` |
 | `anyMatch` | `modules/vehicle/sparepart-servis-b.js` |
 | `anyOpen` | `modules/shared/modal-navigasi.js` |
@@ -3300,6 +3312,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `billOwnershipOf` | `modules/finance/tx-renov.js` |
 | `billPaidFutureTotal` | `modules/finance/cash-projection.js` |
 | `billPaidThisPeriod` | `modules/finance/cash-projection.js` |
+| `billPorsiConfirmSafe` | `modules/finance/akun.js` |
 | `billRangeMonth` | `modules/finance/cash-projection.js` |
 | `billRangeYear` | `modules/finance/cash-projection.js` |
 | `billRenovPaymentSyncOnEdit` | `modules/finance/tx-renov.js` |
@@ -4634,6 +4647,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `cmp` | `modules/finance/piutang-utang.js` |
 | `cmp` | `modules/vehicle/servis-b.js` |
 | `cmp` | `modules/finance/financial-audit-presenter.js` |
+| `cmp` | `modules/finance/dana-titipan-portfolio-render.js` |
 | `cn` | `modules/business/kasir.js` |
 | `cn` | `modules/asset/aset-keluarga.js` |
 | `cn` | `modules/vehicle/service-history-reminder-reconciliation-sot.js` |
@@ -5343,6 +5357,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `d` | `lifeos/adapters/today-adapter.js` |
 | `d` | `economic-intelligence/adapters/user-finance-adapter.js` |
 | `d` | `modules/logistics/logistics-engine.js` |
+| `d` | `modules/finance/titipan-expense-ui.js` |
 | `d` | `modules/finance/finance-category-sot.js` |
 | `d` | `modules/finance/finance-tx-sot.js` |
 | `d` | `modules/finance/finance-cross-entity-atomic.js` |
@@ -10632,6 +10647,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `minThreshold` | `modules/asset/aset-misc.js` |
 | `mirror` | `modules/shared/self-test-cases-a.js` |
 | `mismatch` | `modules/finance/akun.js` |
+| `mismatch` | `modules/finance/titipan-expense-ui.js` |
 | `mismatch` | `modules/home/renovasi.js` |
 | `missing` | `modules/shop/cobek-pricing.js` |
 | `missing` | `modules/vehicle/car-notes-performance.js` |
@@ -11580,6 +11596,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `ok` | `modules/shop/preorder.js` |
 | `okBtn` | `modules/shared/modal-navigasi.js` |
 | `okBtn` | `modules/asset/modal-navigasi.js` |
+| `okGo` | `modules/finance/titipan-expense-ui.js` |
 | `okTexts` | `modules/shared/smoke-test.js` |
 | `old` | `modules/shared/pwa-ux-performance.js` |
 | `old` | `modules/shop/cobek-tx-cart.js` |
@@ -12043,6 +12060,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `ov` | `modules/vehicle/servis-b.js` |
 | `ov` | `modules/vehicle/vehicle-intelligence.js` |
 | `over` | `modules/vehicle/fuel-card.js` |
+| `over` | `modules/finance/dana-titipan-portfolio-render.js` |
 | `overallFrac` | `car-notes.js` |
 | `overAllocatedAmount` | `modules/finance/dana-titipan-aggregation-api.js` |
 | `overallPct` | `budget.js` |
@@ -12134,6 +12152,8 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `ownerName` | `modules/finance/dana-titipan-aggregation-api.js` |
 | `ownerName` | `modules/finance/dana-titipan-commitment-return-api.js` |
 | `ownerName` | `modules/finance/dana-titipan-portfolio-render-b.js` |
+| `ownerPorsiAutoStatusSafe` | `modules/finance/akun.js` |
+| `ownerPorsiTextSafe` | `modules/finance/akun.js` |
 | `OwnerRegistry` | `modules/shared/owner-registry.js` |
 | `OwnerRegistrySettingsUI` | `modules/shared/owner-registry-settings-ui.js` |
 | `ownerRows` | `modules/vehicle/service-session-reconcile-s2051.js` |
@@ -12818,6 +12838,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `pointY` | `modules/shared/modal-navigasi.js` |
 | `pointY` | `modules/asset/modal-navigasi.js` |
 | `pokok` | `modules/business/payroll-absensi.js` |
+| `pokok` | `modules/finance/dana-titipan-portfolio-render.js` |
 | `pokokBaru` | `modules/business/payroll-absensi.js` |
 | `pokokMingguan` | `modules/business/reset-gaji-mingguan.js` |
 | `polaAbsenHtml` | `modules/shared/modules-render.js` |
@@ -12868,6 +12889,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `porsi` | `modules/asset/investasi-view.js` |
 | `PORSI_EPSILON` | `modules/shared/multi-owner-engine.js` |
 | `PORSI_TOTAL` | `modules/shared/multi-owner-engine.js` |
+| `porsiAutoWarnLine` | `modules/shared/modules-render.js` |
 | `porsiBaris` | `modules/asset/aset-owners.js` |
 | `porsiBaru` | `modules/asset/aset-owners.js` |
 | `porsiEl` | `modules/asset/aset-owners.js` |
@@ -13547,6 +13569,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `r` | `modules/shop/generic/product-repository.js` |
 | `r` | `modules/shop/business-flow-presenter-inventory.js` |
 | `r` | `modules/finance/titipan-reconcile.js` |
+| `r` | `modules/finance/titipan-expense-ui.js` |
 | `r` | `modules/shared/a11y-action-controls.js` |
 | `r` | `modules/shop/preorder.js` |
 | `r` | `modules/vehicle/service-category-restore-reconciler-s2451.js` |
@@ -14167,6 +14190,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `renovProjSelEdit` | `modules/finance/transaksi.js` |
 | `renovRemoveUnpaidTalanganPiutang` | `modules/home/renovasi.js` |
 | `renovRepairMarkers` | `modules/finance/tx-renov.js` |
+| `renovSaldoRincian` | `modules/home/renovasi.js` |
 | `renovSelect` | `modules/shared/pwa-ux-performance.js` |
 | `renovTandaiSelesai` | `modules/home/renovasi.js` |
 | `renovTxNeedsModule` | `modules/finance/tx-renov.js` |
@@ -16734,6 +16758,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `t` | `modules/self-reward/self-reward-ai-widget.js` |
 | `t` | `modules/logistics/logistics-engine.js` |
 | `t` | `modules/shop/business-flow-presenter.js` |
+| `t` | `modules/finance/dana-titipan-portfolio-render.js` |
 | `t` | `modules/vehicle/ride-activity-metrics.js` |
 | `t` | `modules/finance/finance-category-sot.js` |
 | `t` | `modules/shared/a11y-pressed-native.js` |
@@ -16939,6 +16964,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `terkumpul` | `modules/finance/edukasi-dana.js` |
 | `termin` | `modules/home/renovasi.js` |
 | `TERMINAL` | `modules/vehicle/reminder-lifecycle.js` |
+| `terpakai` | `modules/finance/dana-titipan-portfolio-render.js` |
 | `terpakai` | `modules/shop/preorder.js` |
 | `tertaut` | `modules/asset/aset-reports.js` |
 | `terutang` | `modules/finance/pajak-pbb-zakat.js` |
@@ -17264,6 +17290,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `torsiToggleCheckStop` | `modules/shared/action-wrappers.js` |
 | `TorsiVehicleAPI` | `modules/vehicle/torsi-vehicle-api.js` |
 | `toShow` | `economic-intelligence/services/notification-service.js` |
+| `tot` | `modules/finance/akun.js` |
 | `tot` | `modules/home/renovasi.js` |
 | `total` | `modules/shared/modules-render-b.js` |
 | `total` | `modules/shared/modules-calc.js` |
@@ -17541,6 +17568,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `triggered` | `economic-intelligence/engine/scoring-engine.js` |
 | `triggered` | `modules/ai/ai-decision-engine.js` |
 | `triggered` | `modules/vehicle/service-legacy-maintenance.js` |
+| `trim` | `modules/finance/dana-titipan-portfolio-render.js` |
 | `trimmed` | `modules/shared/owner-registry.js` |
 | `trimmed` | `modules/shared/owner-registry-settings-ui.js` |
 | `trimmed` | `modules/shared/custodian-registry.js` |
@@ -18021,6 +18049,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `v` | `modules/self-reward/self-reward-view.js` |
 | `v` | `modules/asset/investasi.js` |
 | `v` | `modules/shop/generic/product-repository.js` |
+| `v` | `modules/finance/dana-titipan-portfolio-render.js` |
 | `v` | `modules/finance/titipan-expense-flow.js` |
 | `v` | `modules/finance/finance-event-outbox.js` |
 | `v` | `modules/shared/a11y-pressed-state.js` |
@@ -18068,6 +18097,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `valid` | `modules/vehicle/servis-b.js` |
 | `valid` | `modules/vehicle/service-maintenance-guidance.js` |
 | `valid` | `modules/shop/business-flow-presenter-inventory.js` |
+| `valid` | `modules/finance/titipan-expense-ui.js` |
 | `valid` | `modules/finance/finance-category-sot.js` |
 | `valid` | `modules/home/renovasi.js` |
 | `valid` | `modules/vehicle/service-condition-intelligence-sot.js` |

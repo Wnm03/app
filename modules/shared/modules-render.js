@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2878';
+const MODULE_RENDER_VERSION='s2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2896';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -268,7 +268,7 @@ return parts.length?`<div class="u-fs11 u-t2" style="margin-top:2px">${escapeHtm
 // kartu yg SUDAH ADA (data-action="openAccTxHistory" di wrapper div, tidak
 // berubah) -- linkedTxHint cuma bikin affordance itu KELIHATAN, bukan bikin
 // aksi baru.
-const linkedAssetObj=linked?(D.assets||[]).find(x=>String(x.accountId)===String(a.id)):null;
+const linkedAssetObj=(linked||off)?(D.assets||[]).find(x=>String(x.accountId)===String(a.id)):null;/* akun off tertaut aset/holding: baris porsi hanya bila multi-pemilik (mis. Saldo tagihan) */
 // linkedPorsiLine -- FIX (skenario "Majoris", lanjutan komentar linkedHoldingObj di
 // atas): SEBELUM ini baris porsi HANYA baca dari linkedAssetObj (D.assets), jadi
 // akun yang tertaut LANGSUNG ke Holding Investasi (linkedHoldingObj, tanpa Aset
@@ -278,16 +278,16 @@ const linkedAssetObj=linked?(D.assets||[]).find(x=>String(x.accountId)===String(
 // "Holding adalah sumber kebenaran porsi LIVE"), baru fallback ke Aset seperti
 // semula -- 100% REUSE Investment.getOwners()/MultiOwnerEngine.getOwners(), 0
 // rumus porsi baru.
-const linkedPorsiLine=(linked&&linkedHoldingObj)?(()=>{
+const linkedPorsiLine=((linked||off)&&linkedHoldingObj)?(()=>{
 if(typeof Investment==='undefined')return'';
 const owners=Investment.getOwners(linkedHoldingObj);
-if(!owners||!owners.length)return'';
-const porsiTxt=owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
+if(!owners||!owners.length||(off&&owners.length<2))return'';
+const porsiTxt=(typeof ownerPorsiTextSafe==='function'&&typeof recalcAccBalance==='function')?ownerPorsiTextSafe(owners,recalcAccBalance(a.id)):owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
 return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
 })():(linkedAssetObj&&typeof MultiOwnerEngine!=='undefined')?(()=>{
 const res=MultiOwnerEngine.getOwners(linkedAssetObj);
-if(!res||!res.ok||!res.owners.length)return'';
-const porsiTxt=res.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
+if(!res||!res.ok||!res.owners.length||(off&&res.owners.length<2))return'';
+const porsiTxt=(typeof ownerPorsiTextSafe==='function'&&typeof recalcAccBalance==='function')?ownerPorsiTextSafe(res.owners,recalcAccBalance(a.id)):res.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
 return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
 })():'';
 // standalonePorsiLine (patch delacc-titipan-debt susulan) -- SEBELUM ini,
@@ -300,9 +300,11 @@ return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</
 // jaga 0 duplikasi kalau akun ini ternyata JUGA linked (linkedPorsiLine sudah
 // mengisi lebih dulu, prioritas Holding/Aset tetap menang).
 const standalonePorsiLine=(!linkedPorsiLine&&ownBadgeState&&ownBadgeState.source==='account'&&ownBadgeState.owners.length)?(()=>{
-const porsiTxt=ownBadgeState.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
+const porsiTxt=(typeof ownerPorsiTextSafe==='function'&&typeof recalcAccBalance==='function')?ownerPorsiTextSafe(ownBadgeState.owners,recalcAccBalance(a.id)):ownBadgeState.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
 return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
 })():'';
+const _opaSt=(typeof ownerPorsiAutoStatusSafe==='function'?ownerPorsiAutoStatusSafe(a.id):null);
+const porsiAutoWarnLine=_opaSt?`<div class="u-fs11" style="margin-top:2px;color:var(--accent4)">⚠️ Porsi tidak bisa menyesuaikan otomatis (${_opaSt.alasan==='saldo'?'saldo akun nol/minus':'nominal salah satu pemilik minus'}). Atur ulang porsi lewat Atur Porsi.</div>`:'';
 const linkedTxHint=linked?'<div class="u-fs10 u-t2" style="margin-top:2px">📜 Ketuk kartu untuk riwayat transaksi modal</div>':'';
 // titipanGapLine (sesi lanjutan #2, Rekomendasi #3) -- murni informasi, 0
 // tombol/aksi baru, 0 mutasi ke D. Hanya tampil utk akun berdiri-sendiri
@@ -319,6 +321,7 @@ return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAc
       ${invDetailLine}
       ${linkedPorsiLine}
       ${standalonePorsiLine}
+      ${porsiAutoWarnLine}
       ${linkedTxHint}
       ${titipanGapLine}
       ${klienLine}

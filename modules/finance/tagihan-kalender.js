@@ -1043,7 +1043,7 @@ if(_o===null){toast(resolveRenovBillOwner._managing?'ℹ️ Atur pemilik akun du
 _renovBillOwnerId=_o;
 }
 if(!_renovBillProject&&typeof billStoredOwnerForPay==='function'){const _so=billStoredOwnerForPay(b);if(_so)_renovBillOwnerId=_so;}const _talMeta=_talProj||((!_renovBillProject&&!_renovBillOwnerId&&typeof billTalanganPayMeta==='function')?billTalanganPayMeta(b):null);// S2844 pemilik tersimpan (tx-renov.js); S2848 bukan pemilik akun sumber = talangan (piutang otomatis)
-const _payTxId=uid();
+if(typeof billPorsiConfirmSafe==='function'&&!billPorsiConfirmSafe(b,_renovBillOwnerId))return;const _payTxId=uid();
 // billPrevNextDue (audit s327): snapshot nextDue SEBELUM dimajukan oleh advanceBillNextDue()/
 // logic kind-specific di bawah -- dipakai revertBillFromDeletedTx() utk mengembalikan nextDue
 // PERSIS ke nilai sebelum pembayaran ini kalau transaksinya dihapus lagi. Sebelumnya revert cuma

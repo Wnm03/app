@@ -280,7 +280,7 @@ const InvestmentUI = {
     const otherTotal = draft.reduce((sum, row, k) => k === i ? sum : sum + (typeof row.porsi === 'number' && isFinite(row.porsi) ? row.porsi : 0), 0);
     const remainingPorsi = Math.max(0, 100 - otherTotal);
     const capped = Math.min(quotaPorsi, remainingPorsi);
-    return Math.round(Math.max(0, capped) * 10000) / 10000;
+    return Math.round(Math.max(0, capped) * 1e10) / 1e10;
   },
 
   // applyQuotaToRow(i) — SESI AF2, mirror PERSIS Aset.applyQuotaToRow(). Tombol manual "🔄 Isi dari
@@ -689,7 +689,7 @@ const InvestmentUI = {
     if (value <= 0) return;
     const n = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
     const nominal = isFinite(n) ? n : 0;
-    const porsi = Math.round((nominal / value * 100) * 10000) / 10000;
+    const porsi = Math.round((nominal / value * 100) * 1e10) / 1e10;
     InvestmentUI._ownersDraft[i].porsi = porsi;
     // SESI AF1: tandai baris ini "ditulis manual" (lihat onOwnerPorsiInput() di atas).
     InvestmentUI._ownersDraft[i]._touched = true;

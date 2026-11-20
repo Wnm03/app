@@ -132,9 +132,13 @@ const TitipanExpenseUI = {
       if (typeof toast === 'function') toast('⚠️ Fitur pengeluaran dana titipan belum siap dimuat');
       return;
     }
-    const owners = (typeof DanaTitipanPortfolioAPI.listExistingOwners === 'function')
+    const allOwners = (typeof DanaTitipanPortfolioAPI.listExistingOwners === 'function')
       ? (DanaTitipanPortfolioAPI.listExistingOwners() || []) : [];
-    this._draft = owners.map((o) => ({ ownerId: o.ownerId, ownerName: o.ownerName, selected: false, porsi: null }));
+    // S2893: hanya pemilik dengan kartu Dana Titipan nyata (aturan S2852); build() gagal -> daftar penuh.
+    const active = this._activeOwnerIds();
+    const owners = active ? allOwners.filter((o) => o && active.has(String(o.ownerId))) : allOwners;
+    this._draft = owners.map((o) => ({ ownerId: o.ownerId, ownerName: o.ownerName, selected: owners.length === 1, porsi: null }));
+    this._accTouched = false;
     this._splitMode = 'manual';
     this._renderOwnersList();
 
@@ -150,7 +154,13 @@ const TitipanExpenseUI = {
     if (accEl && typeof D !== 'undefined' && D && Array.isArray(D.accounts)) {
       accEl.innerHTML = D.accounts.map((a) => `<option value="${escapeHtml(a.id)}">${a.emoji || ''} ${escapeHtml(a.name)}</option>`).join('');
       accEl.value = D.accounts[0] ? D.accounts[0].id : '';
+      if (!accEl._titipanPickBound && typeof accEl.addEventListener === 'function') {
+        accEl._titipanPickBound = true;
+        accEl.addEventListener('change', () => TitipanExpenseUI.onAccountPick());
+      }
     }
+    this._syncAccountToOwner();
+    this._updateSplitPreview();
     this.setDirection('biasa');
     const noteEl = document.getElementById('titipanExpenseNote');
     if (noteEl) noteEl.value = '';
@@ -241,6 +251,49 @@ const TitipanExpenseUI = {
     });
   },
 
+  // S2893 — _activeOwnerIds(): id pemilik yang punya kartu Dana Titipan nyata (aturan SAMA dgn dropdown talangan tagihan, S2852:
+  // DanaTitipanPortfolioAPI.build().owners). null = build() tak tersedia/gagal -> daftar penuh (perilaku lama).
+  _activeOwnerIds() {
+    try {
+      if (typeof DanaTitipanPortfolioAPI === 'undefined' || !DanaTitipanPortfolioAPI || typeof DanaTitipanPortfolioAPI.build !== 'function') return null;
+      const r = DanaTitipanPortfolioAPI.build();
+      if (!r || !Array.isArray(r.owners)) return null;
+      return new Set(r.owners.filter((o) => o && o.ownerId != null).map((o) => String(o.ownerId)));
+    } catch (_e) { void _e; return null; }
+  },
+
+  // S2893 — _accountForOwner(ownerId): akun pertama yang dimiliki pemilik tsb (resolveOwnerDefaultForAccount, aturan pemeriksa).
+  // Akun yang HANYA milik pemilik itu didahulukan. null kalau tak ada.
+  _accountForOwner(ownerId) {
+    try {
+      if (typeof resolveOwnerDefaultForAccount !== 'function' || typeof D === 'undefined' || !D || !Array.isArray(D.accounts)) return null;
+      let any = null;
+      for (const a of D.accounts) {
+        const r = resolveOwnerDefaultForAccount(a.id);
+        if (!r || !r.ok || !Array.isArray(r.owners)) continue;
+        if (!r.owners.some((x) => String(x && x.ownerId) === String(ownerId))) continue;
+        if (r.owners.length === 1) return a.id;
+        if (any === null) any = a.id;
+      }
+      return any;
+    } catch (_e) { void _e; return null; }
+  },
+
+  // S2893 — _syncAccountToOwner(): akun pindah ke akun milik pemilik terpilih (hanya bila tepat 1 pemilik tercentang dan akun
+  // belum dipilih manual oleh pengguna). Tak ada akun milik -> akun dibiarkan.
+  _syncAccountToOwner() {
+    if (this._accTouched) return;
+    const sel = this._draft.filter((o) => o.selected);
+    if (sel.length !== 1) return;
+    const accEl = document.getElementById('titipanExpenseAcc');
+    if (!accEl) return;
+    const acc = this._accountForOwner(sel[0].ownerId);
+    if (acc != null) accEl.value = String(acc);
+  },
+
+  // S2893 — onAccountPick(): pengguna memilih akun sendiri -> jangan ditimpa lagi.
+  onAccountPick() { this._accTouched = true; },
+
   // toggleOwner(i, checked) — murni ubah draft di memori + render ulang
   // list (supaya kolom porsi muncul/hilang sesuai jumlah tercentang) +
   // update preview split. 0 tulis ke D.
@@ -248,6 +301,7 @@ const TitipanExpenseUI = {
     if (!this._draft[i]) return;
     this._draft[i].selected = !!checked;
     if (this._splitMode === 'rata') this._autoFillEqualPorsi();
+    this._syncAccountToOwner();
     this._renderOwnersList();
     this._updateSplitPreview();
   },
@@ -295,6 +349,24 @@ const TitipanExpenseUI = {
     if (!amtEl) return NaN;
     const raw = String(amtEl.value || '').replace(/[^\d.-]/g, '');
     return raw === '' ? NaN : parseFloat(raw);
+  },
+
+  // _accountOwnerMismatch(accountId, ownersInput) — nama pemilik terpilih yang
+  // TIDAK termasuk pemilik akun (aturan = checkTransactionOwnerRefs). PURE.
+  // Akun tanpa resolver/pemilik (source:'none') -> [] (hindari false-positive).
+  _accountOwnerMismatch(accountId, ownersInput) {
+    try {
+      if (typeof resolveOwnerDefaultForAccount !== 'function' || !accountId) return [];
+      const r = resolveOwnerDefaultForAccount(accountId);
+      if (!r || !r.ok || !Array.isArray(r.owners) || !r.owners.length) return [];
+      const valid = new Set(r.owners.map((o) => String(o && o.ownerId)));
+      return (ownersInput || [])
+        .filter((o) => !valid.has(String(o.ownerId)))
+        .map((o) => {
+          const d = (this._draft || []).find((x) => String(x.ownerId) === String(o.ownerId));
+          return (d && d.ownerName) || String(o.ownerId);
+        });
+    } catch (_e) { void _e; return []; }
   },
 
   // _selectedOwnersInput() — bentuk owners[] sesuai shape yang diterima
@@ -373,6 +445,20 @@ const TitipanExpenseUI = {
       const accEl = document.getElementById('titipanExpenseAcc');
       const accountId = (accEl && accEl.value)
         || ((typeof D !== 'undefined' && D && Array.isArray(D.accounts) && D.accounts[0]) ? D.accounts[0].id : '');
+
+      // REKOMENDASI E2E (2026-11-20): akun yang bukan milik pemilik terpilih
+      // (mis. Cash/SELF untuk dana titipan renov) dulu tersimpan diam-diam lalu
+      // ditandai orphan oleh TitipanReconcile.checkTransactionOwnerRefs().
+      // Aturan SAMA dgn pemeriksa itu (resolveOwnerDefaultForAccount) -- hanya
+      // peringatan + konfirmasi, TIDAK memblokir (0 regresi alur lama).
+      const mismatch = this._accountOwnerMismatch(accountId, ownersInput);
+      if (mismatch.length) {
+        let okGo = true;
+        if (typeof askConfirm === 'function') {
+          okGo = await askConfirm('Akun ini bukan milik ' + mismatch.join(', ') + '. Pengeluaran akan ditandai tidak sinkron oleh pemeriksa data. Tetap simpan? (disarankan pilih akun milik pemilik tersebut)', { okText: 'Tetap Simpan' });
+        }
+        if (!okGo) return;
+      }
 
       const input = {
         nominal,

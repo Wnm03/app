@@ -52,7 +52,7 @@ test('_ownerListHtml() — tema "modern": render <table class="tx-tbl"> pembungk
   const projection = ctx.DanaTitipanPortfolioAPI.build();
   const html = ctx.DanaTitipanPortfolioPresenter._ownerListHtml(projection.owners);
   assert.match(html, /class="tx-tbl-wrap"><table class="tx-tbl">/);
-  assert.match(html, /<th>Pemilik<\/th><th class="num">Pokok → Kini<\/th><th class="num">±<\/th>/);
+  assert.match(html, /<th>Pemilik<\/th><th class="num">Masuk holding → Kini<\/th><th class="num">±<\/th>/);
   assert.match(html, /<tr class="tx-tbl-row titipan-tbl-owner-row">/);
   assert.match(html, /<td colspan="3" class="titipan-tbl-owner-cell">/);
 });

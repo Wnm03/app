@@ -115,3 +115,16 @@ test('renderAccGrid() — akun nonaktif (includeInBalance:false, badge "(off)") 
   assert.ok(!el.innerHTML.includes('👥 Porsi:'), 'akun off tidak boleh dapat baris porsi');
   assert.ok(!el.innerHTML.includes('📜 Ketuk kartu untuk riwayat transaksi modal'), 'akun off tidak boleh dapat hint riwayat');
 });
+
+test('renderAccGrid() — akun nonaktif (off) tertaut aset MULTI-owner -> baris porsi tampil, hint riwayat tetap tersembunyi', () => {
+  const D = {
+    assets: [{ id: 'as1', name: 'Majoris', nilai: 10845758, accountId: 'acc1', owners: [{ ownerId: 'R', ownerName: 'renov', porsi: 84.3257 }, { ownerId: 'M', ownerName: 'mas sihab', porsi: 15.6743 }] }],
+    accounts: [{ id: 'acc1', name: 'Saldo tagihan', emoji: '💰', baseBalance: 10845758, includeInBalance: false }],
+    transactions: [],
+  };
+  const { ctx, el } = makeCtx(D);
+  ctx.renderAccGrid();
+  assert.ok(el.innerHTML.includes('👥 Porsi:'), 'akun off multi-owner harus menampilkan porsi');
+  assert.ok(el.innerHTML.includes('mas sihab (15.6743%)'), 'porsi Mas Sihab tampil');
+  assert.ok(!el.innerHTML.includes('📜 Ketuk kartu untuk riwayat transaksi modal'), 'hint riwayat tetap tidak tampil utk akun off');
+});

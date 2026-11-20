@@ -36,6 +36,7 @@ _accProjBalCache=null;
 _totalSaldoCache=undefined;
 _totalProyeksiCache=undefined;
 _txByAccIndex=null;
+try{_opaSyncAll();}catch(_e){_opaLastErr=_e;}
 }
 // S2830 — Saldo AKTUAL vs saldo PROYEKSI (tanpa flag/migrasi data baru; murni berdasar tanggal transaksi).
 //   Aktual   = baseBalance + transaksi bertanggal <= HARI INI (tanpa tanggal = dianggap sudah terjadi, kompatibel data lama).
@@ -54,7 +55,7 @@ return /^\d{4}-\d{2}-\d{2}/.test(d)&&d.slice(0,10)>today;
 }
 function _accEnsureDay(){
 const k=_accTodayKey();
-if(_accBalDayKey!==k){_accBalDayKey=k;_accBalCache=null;_accProjBalCache=null;_totalSaldoCache=undefined;_totalProyeksiCache=undefined;}
+if(_accBalDayKey!==k){_accBalDayKey=k;_accBalCache=null;_accProjBalCache=null;_totalSaldoCache=undefined;_totalProyeksiCache=undefined;try{_opaSyncAll();}catch(_e){_opaLastErr=_e;}}
 return k;
 }
 function _accCalcBalance(accId,projected,today){
@@ -80,6 +81,8 @@ return bal;
 function recalcAccBalance(accId){
 const today=_accEnsureDay();
 if(_accBalCache&&_accBalCache.has(accId))return _accBalCache.get(accId);
+// Jangkar porsi dibuat pada perhitungan saldo pertama setelah data dimuat/dipulihkan, SEBELUM transaksi berikutnya masuk (hook invalidate/ganti-hari saja terlambat).
+if(!_opaBusy&&typeof D!=='undefined'&&D&&_opaTargets().some(t=>!t.e.ownerAnchor))_opaSyncAll();
 const bal=_accCalcBalance(accId,false,today);
 if(!_accBalCache)_accBalCache=new Map();
 _accBalCache.set(accId,bal);
@@ -314,6 +317,26 @@ const isDefault=(typeof OwnershipEngine!=='undefined')?OwnershipEngine.resolve(a
 const mismatch=owners.length>0&&isAllSelf===false&&isDefault===true;
 return{ok:true,owners,source,isAllSelf,isDefault,mismatch};
 }
+// ===== Porsi pemilik OTOMATIS mengikuti nominal (permintaan: pengeluaran 1 pemilik tidak boleh menggeser porsi pemilik lain) =====
+// Model tanpa-status-berjalan: nominal_i = K_i + jumlah efek transaksi (akun tertaut) untuk pemilik i. K dijangkar saat porsi
+// terakhir diubah (manual/impor) = porsi_i x saldo - efek transaksi yang sudah ada saat itu. Transaksi ber-deductionOwnerId
+// (cocok dgn pemilik) hanya menggeser pemilik itu; transaksi tanpa pemilik dibagi menurut bobot jangkar (porsi tidak bergeser).
+// Berlaku untuk acc.owners, aset tertaut akun (D.assets[].owners) dan holding tertaut akun. Idempoten; tambah/ubah/hapus transaksi
+// otomatis benar. Porsi tidak diubah bila saldo <= 0, ada nominal negatif, atau porsi tidak berjumlah 100%.
+let _opaBusy=false;
+let _opaLastErr=null;
+let _opaStatus=new Map();
+function _opaTargets(){const out=[];const ok=e=>e&&Array.isArray(e.owners)&&e.owners.length>=2;(D.accounts||[]).forEach(a=>{if(ok(a))out.push({e:a,accId:a.id});});(D.assets||[]).forEach(a=>{if(ok(a)&&a.accountId)out.push({e:a,accId:a.accountId});});(Array.isArray(D.investments)?D.investments:[]).forEach(h=>{if(ok(h)&&h.accountId)out.push({e:h,accId:h.accountId});});return out;}
+function _opaOwnerKey(t,ow){const o=t&&t.deductionOwnerId;if(o==null||o==='')return null;const s=String(o);const hit=ow.find(x=>x.id===s);if(hit)return hit.id;if(s==='SELF'){const me=ow.find(x=>x.isSelf||x.id==='SELF');if(me)return me.id;}return null;}
+function _opaDeltas(accId,ow,w,today){const sums={};ow.forEach(o=>{sums[o.id]=0;});const list=_getTxByAccIndex().get(accId)||[];list.forEach(t=>{if(!t||t.hitungKas===false||_accTxIsFuture(t,today))return;let d=0;const a=Number(t.amount)||0;if(t.type==='income'||t.type==='transfer_in')d=a;else if(t.type==='expense'||t.type==='transfer_out')d=-a;else return;if(!d)return;const k=_opaOwnerKey(t,ow);if(k!=null)sums[k]+=d;else ow.forEach(o=>{sums[o.id]+=d*(w[o.id]||0);});});return sums;}
+function _opaSyncOne(tg,today){const e=tg.e,owners=e.owners;const ids=owners.map(o=>o&&o.ownerId!=null?String(o.ownerId):'');const porsi=owners.map(o=>Number(o&&o.porsi));if(ids.some(i=>!i)||new Set(ids).size!==ids.length||porsi.some(p=>!Number.isFinite(p)||p<0))return false;if(Math.abs(porsi.reduce((s,p)=>s+p,0)-100)>0.01)return false;const ow=owners.map((o,i)=>({id:ids[i],isSelf:!!o.isSelf}));const bal=_accCalcBalance(tg.accId,false,today);const an=e.ownerAnchor;let same=!!(an&&an.v===1&&Array.isArray(an.ids)&&an.ids.join('|')===ids.join('|')&&Array.isArray(an.P)&&an.P.every((p,i)=>Math.abs(p-porsi[i])<1e-9)&&Array.isArray(an.K)&&Array.isArray(an.w));let nom=null,w=null,s=null;if(same){w={};ids.forEach((id,i)=>{w[id]=an.w[i];});s=_opaDeltas(tg.accId,ow,w,today);nom=ids.map((id,i)=>an.K[i]+s[id]);if(Math.abs(nom.reduce((x,y)=>x+y,0)-bal)>1)same=false;}if(!same){w={};ids.forEach((id,i)=>{w[id]=porsi[i]/100;});s=_opaDeltas(tg.accId,ow,w,today);e.ownerAnchor={v:1,ids:ids.slice(),P:porsi.slice(),w:ids.map((id,i)=>w[id]),K:ids.map((id,i)=>porsi[i]/100*bal-s[id])};return true;}if(!(bal>0)){_opaStatus.set(String(tg.accId),'saldo');return false;}if(nom.some(n=>n<-0.5)){_opaStatus.set(String(tg.accId),'negatif');return false;}const tot=nom.reduce((x,y)=>x+y,0);const np=nom.map(n=>Math.max(0,n)/tot*100);if(np.every((p,i)=>Math.abs(p-porsi[i])<1e-9))return false;owners.forEach((o,i)=>{o.porsi=np[i];});an.P=np.slice();return true;}
+function _opaSyncAll(){if(_opaBusy||typeof D==='undefined'||!D)return false;_opaBusy=true;let ch=false;_opaStatus=new Map();try{const today=_accTodayKey();_opaTargets().forEach(tg=>{try{if(_opaSyncOne(tg,today))ch=true;}catch(_e){/* satu target gagal tidak boleh mengganggu yang lain */}});}catch(_e){_opaLastErr=_e;}finally{_opaBusy=false;}return ch;}
+// Konfirmasi bayar tagihan di akun berporsi (>=2 pemilik) tanpa pemilik pemotong: nominal dibagi proporsional (porsi sendiri ikut menyusut). true = lanjut.
+function billPorsiConfirmSafe(b,renovOwnerId){if(renovOwnerId||!b||b.deductionOwnerId||typeof getAccOwnersRaw!=='function'||typeof confirm!=='function')return true;const pa=b.accountId||(D.accounts[0]&&D.accounts[0].id)||'';const po=(getAccOwnersRaw(pa)||{}).owners||[];if(po.length<2)return true;const pn=(D.accounts.find(x=>sameId(x.id,pa))||{}).name||'akun';if(confirm('Akun "'+pn+'" berporsi ('+po.map(o=>o.ownerName).join(', ')+'). Tagihan ini belum punya pemilik pemotong, jadi nominalnya dibagi proporsional ke semua pemilik. Lanjutkan?\n\nBatal = atur pemilik di tagihan dulu.'))return true;if(typeof toast==='function')toast('ℹ️ Pembayaran dibatalkan — atur pemilik pemotong di tagihan');return false;}
+// Status penyesuaian otomatis per akun: null = normal; {alasan:'saldo'|'negatif'} = porsi dibiarkan (tidak bisa dihitung otomatis).
+function ownerPorsiAutoStatusSafe(accId){const r=_opaStatus.get(String(accId));return r?{alasan:r}:null;}
+// Teks porsi: nama Rp nominal (xx,xx%). bal = saldo akun (dasar nominal).
+function ownerPorsiTextSafe(owners,bal){const b=Number(bal)||0;return(owners||[]).map(o=>{const p=Number(o.porsi)||0;const nm=escapeHtml(String(o.ownerName||o.ownerId||''));const pc=String(Number(p.toFixed(4)));return b>0?`${nm} (${pc}%) ${typeof fmtFull==='function'?fmtFull(Math.round(b*p/100)):'Rp '+Math.round(b*p/100)}`:`${nm} (${pc}%)`;}).join(' · ');}
 function setAccOwners(accId,owners){
 if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return{ok:false,reason:'stale-write'};
 const acc=D.accounts.find(a=>sameId(a.id,accId));
@@ -424,11 +447,11 @@ function isAliranKlienSafe(t){if(typeof isAliranKlien!=='function'){ensureKlienE
 // Langkah 5 (U-10): akun yang memuat aliran dana klien (DP/termin, pengembalian, belanja dana proyek) tidak boleh ditautkan ke aset/holding: akun tertaut keluar dari saldo pribadi, sementara dana tertahan tetap dikurangkan.
 function akunPunyaAliranKlienSafe(accId){if(accId==null||accId==='')return false;return (D.transactions||[]).some(t=>t&&sameId(t.accountId,accId)&&isAliranKlienOnlySafe(t));}
 // Tampilan saldo (audit dana proyek): rincian fisik / dana klien tertahan / pribadi. null bila tak ada proyek klien. Hanya BACA; tidak mengubah totalSaldoAkun().
-function saldoKlienRingkasSafe(){if(!adaProyekKlienSafe())return null;try{const fisik=totalSaldoAkun(),pribadi=saldoPribadiSafe();return{fisik,pribadi,tertahan:fisik-pribadi};}catch(e){return null;}}
+function saldoKlienRingkasSafe(){if(!adaProyekKlienSafe())return null;try{const fisik=totalSaldoAkun(),pribadi=saldoPribadiSafe();const tertahan=fisik-pribadi;let profit=0;if(typeof renovSaldoRincian==='function'){const r=renovSaldoRincian();profit=Math.max(0,Math.min(tertahan,r.profit||0));}return{fisik,pribadi,tertahan,profit,proyek:tertahan-profit};}catch(e){return null;}}
 // Catatan kecil di bawah total saldo. Dibuat/diperbarui/dihapus dinamis (tanpa ubah HTML). luarInduk=true: sisipkan setelah induk anchor (anchor ada di baris flex).
 // Hub: saldo hero = saldo PRIBADI; catatan kecil bila ada dana klien tertahan (> 0). Dibuat sekali, diperbarui, dihapus bila 0. Baca-saja.
-function catatanHubSaldoKlienSafe(anchor){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=saldoKlienRingkasSafe();let n=document.getElementById('dashHubHeroKlien');if(!r||!(r.tertahan>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id='dashHubHeroKlien';n.style.cssText='font-size:11px;opacity:.8;margin-top:2px';anchor.parentNode.appendChild(n);}n.textContent='Belum termasuk dana klien tertahan '+fmtFull(r.tertahan)+' · Saldo fisik '+fmtFull(r.fisik);}
-function catatanSaldoKlienSafe(anchor,id,luarInduk){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=saldoKlienRingkasSafe();let n=document.getElementById(id);if(!r||!(r.tertahan>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id=id;n.className='u-fs11 u-t2';n.style.marginTop='4px';if(luarInduk&&anchor.parentNode.parentNode&&typeof anchor.parentNode.parentNode.insertBefore==='function')anchor.parentNode.parentNode.insertBefore(n,anchor.parentNode.nextSibling);else anchor.parentNode.appendChild(n);}n.textContent='Termasuk dana klien tertahan '+fmtFull(r.tertahan)+' · Saldo pribadi '+fmtFull(r.pribadi);}
+function catatanHubSaldoKlienSafe(anchor){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=saldoKlienRingkasSafe();let n=document.getElementById('dashHubHeroKlien');if(!r||!(r.tertahan>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id='dashHubHeroKlien';n.style.cssText='font-size:11px;opacity:.8;margin-top:2px';anchor.parentNode.appendChild(n);}n.textContent='Saldo bersih (pribadi). Belum termasuk dana klien tertahan '+fmtFull(r.tertahan)+(r.tertahan>0?(r.profit>0?' (saldo proyek '+fmtFull(r.proyek)+' + profit belum dicairkan '+fmtFull(r.profit)+')':' (saldo proyek)'):'')+' · Saldo fisik '+(typeof fmtFullSigned==='function'?fmtFullSigned:fmtFull)(r.fisik);}
+function catatanSaldoKlienSafe(anchor,id,luarInduk){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=saldoKlienRingkasSafe();let n=document.getElementById(id);if(!r||!(r.tertahan>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id=id;n.className='u-fs11 u-t2';n.style.marginTop='4px';if(luarInduk&&anchor.parentNode.parentNode&&typeof anchor.parentNode.parentNode.insertBefore==='function')anchor.parentNode.parentNode.insertBefore(n,anchor.parentNode.nextSibling);else anchor.parentNode.appendChild(n);}n.textContent='Termasuk dana klien tertahan '+fmtFull(r.tertahan)+(r.tertahan>0?(r.profit>0?' (saldo proyek '+fmtFull(r.proyek)+' + profit belum dicairkan '+fmtFull(r.profit)+')':' (saldo proyek)'):'')+' · Saldo bersih pribadi '+(typeof fmtFullSigned==='function'?fmtFullSigned:fmtFull)(r.pribadi);}
 // Set id akun (string) yang memuat aliran dana klien; satu pass.
 function akunAliranKlienSetSafe(){const s=new Set();if(!adaProyekKlienSafe())return s;(D.transactions||[]).forEach(t=>{if(t&&t.accountId!=null&&t.accountId!==''&&isAliranKlienOnlySafe(t))s.add(String(t.accountId));});return s;}
 // Akun tertaut aset/holding yang memuat dana klien (kasus data lama). Hanya BACA.
