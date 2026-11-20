@@ -893,7 +893,7 @@ return;
 }
 AccOwners._accId=acc.id;
 AccOwners._onSaved=(_ext&&typeof onSaved==='function')?onSaved:null;
-document.getElementById('accountOwnersAccName').textContent='🏦 '+(acc.emoji||'💰')+' '+acc.name;
+document.getElementById('accountOwnersAccName').textContent=((acc.emoji||'💰')==='🏦'?'':'🏦 ')+(acc.emoji||'💰')+' '+acc.name;
 const res=getAccOwners(acc.id);
 AccOwners._draft=(res&&res.ok?res.owners:[]).map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
 AccOwners._rebalancePending=null;
@@ -921,6 +921,7 @@ listBox.innerHTML='<div class="empty"><div class="empty-text">Belum ada pemilik.
 AccOwners.updateTotal();
 return;
 }
+const base=AccOwners._baseValue();
 listBox.innerHTML=draft.map((o,i)=>{
 const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:null;
 return '<div style="margin-bottom:8px">'+
@@ -928,7 +929,11 @@ return '<div style="margin-bottom:8px">'+
 '<input type="text" class="fi" style="flex:1" placeholder="Nama pemilik" value="'+escapeHtml(o.ownerName||'')+'" data-oninput="AccOwners.onNameInput" data-oninput-args=\'['+i+',"$value"]\'>'+
 '<button type="button" class="btn btn-ghost btn-sm" data-action="AccOwners.removeRow" data-args=\'['+i+']\' aria-label="Hapus pemilik">✕</button>'+
 '</div>'+
+'<div class="u-grid2" style="margin-bottom:0">'+
 '<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Porsi (%)</label><input type="number" class="fi" id="accOwnerPorsi'+i+'" placeholder="%" inputmode="decimal" value="'+(porsiNum!==null?porsiNum:'')+'" data-oninput="AccOwners.onPorsiInput" data-oninput-args=\'['+i+',"$value"]\'></div>'+
+'<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Nominal (Rp)</label><input type="text" class="fi" id="accOwnerNominal'+i+'" placeholder="0" inputmode="decimal" value="'+((base>0&&porsiNum!==null)?Math.round(base*porsiNum/100):'')+'" data-oninput="AccOwners.onNominalInput" data-oninput-args=\'['+i+',"$value"]\'></div>'+
+'</div>'+
+(base>0?'':'<div style="font-size:10.5px;color:var(--text3);margin:2px 0 4px">Saldo akun belum positif -- Nominal (Rp) belum bisa dihitung otomatis, isi Porsi (%) saja.</div>')+
 '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:4px;cursor:pointer">'+
 '<input type="checkbox" style="width:14px;height:14px"'+(o.isSelf?' checked':'')+' data-onchange="AccOwners.onIsSelfToggle" data-onchange-args=\'['+i+',"$checked"]\'> 👤 Ini saya'+
 '</label>'+
@@ -989,12 +994,49 @@ onPorsiInput(i,val){
 if(!AccOwners._draft[i])return;
 const n=parseFloat(val);
 AccOwners._draft[i].porsi=isFinite(n)?n:0;
+AccOwners._draft[i]._touched=true;
+AccOwners._syncNominalEl(i);
 AccOwners.updateTotal();
+AccOwners._applyRemainingShare(i);
 // FITUR "Auto-Rebalance Porsi Pemilik" (Agustus 2026): kalau ketikan ini bikin total porsi
 // >100% DAN ada porsi pemilik lain yang bisa dikurangi, tawarkan penyesuaian (proporsional/dari
 // terbesar/manual) lewat panel di bawah list -- TIDAK pernah mengubah porsi pemilik lain diam2,
 // lihat _checkRebalanceTrigger()/_renderRebalancePanel(). Sama persis Aset.onOwnerPorsiInput().
 AccOwners._checkRebalanceTrigger(i);
+},
+// _baseValue() -- dasar nominal Rp = saldo akun saat ini (sama dasar dgn ownerPorsiTextSafe() di kartu akun).
+// 0 bila akun tidak ditemukan / saldo <=0 (nominal tidak bisa dihitung, UI jatuh ke Porsi (%) saja).
+_baseValue(){
+try{const b=(typeof recalcAccBalance==='function'&&AccOwners._accId!=null)?Number(recalcAccBalance(AccOwners._accId)):0;return isFinite(b)&&b>0?b:0;}catch(_e){return 0;}
+},
+// _syncNominalEl(i) -- tulis ulang kolom Nominal (Rp) baris i dari porsi draft (tanpa render ulang list, fokus aman).
+_syncNominalEl(i){
+const base=AccOwners._baseValue();if(!(base>0)||!AccOwners._draft[i])return;
+const el=document.getElementById('accOwnerNominal'+i);
+if(el)el.value=Math.round(base*(Number(AccOwners._draft[i].porsi)||0)/100);
+},
+// onNominalInput(i,val) -- arah sebaliknya: user isi Nominal (Rp) -> Porsi (%) dihitung (presisi 1e-10, round-trip lossless
+// sama Aset/Investasi), disimpan ke draft[i].porsi (SATU-SATUNYA field porsi; nominal tidak pernah disimpan sendiri).
+onNominalInput(i,val){
+if(!AccOwners._draft[i])return;
+const base=AccOwners._baseValue();if(!(base>0))return;
+const n=parseFloat(String(val).replace(/[^0-9.-]/g,''));
+const nominal=isFinite(n)?n:0;
+const porsi=Math.round((nominal/base*100)*1e10)/1e10;
+AccOwners._draft[i].porsi=porsi;AccOwners._draft[i]._touched=true;
+const pe=document.getElementById('accOwnerPorsi'+i);if(pe)pe.value=porsi;
+AccOwners.updateTotal();
+AccOwners._applyRemainingShare(i);
+AccOwners._checkRebalanceTrigger(i);
+},
+// _applyRemainingShare(i) -- auto-fill: 1 baris kosong yg belum disentuh otomatis dapat sisa porsi (SSOT calculateRemainingShare(), sama Aset/Investasi).
+_applyRemainingShare(i){
+if(typeof calculateRemainingShare!=='function')return;
+const r=calculateRemainingShare(AccOwners._draft,i);if(!r)return;
+AccOwners._draft[r.targetIndex].porsi=r.porsi;AccOwners._draft[r.targetIndex]._auto=true;
+const pe=document.getElementById('accOwnerPorsi'+r.targetIndex);if(pe)pe.value=r.porsi;
+AccOwners._syncNominalEl(r.targetIndex);
+AccOwners.updateTotal();
 },
 onIsSelfToggle(i,checked){
 if(!AccOwners._draft[i])return;

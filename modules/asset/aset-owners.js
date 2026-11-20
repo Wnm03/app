@@ -510,7 +510,7 @@ if(typeof calculateRemainingShare!=='function')return;
 const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
 const result=calculateRemainingShare(draft,editedIndex);
 if(!result)return;
-draft[result.targetIndex].porsi=result.porsi;
+draft[result.targetIndex].porsi=result.porsi;draft[result.targetIndex]._auto=true;
 const porsiEl=document.getElementById('ownerPorsi'+result.targetIndex);
 if(porsiEl)porsiEl.value=result.porsi;
 const nilai=Aset._ownersAssetNilai();

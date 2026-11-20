@@ -250,6 +250,14 @@ const InvestmentListUI = {
         if (typeof console !== 'undefined' && console.error) console.error('[InvestmentListUI._renderList] gagal hitung holding', h && h.id, err);
       }
       const cls = gain >= 0 ? 'green' : 'red';
+      // S2860: baris pemilik "60% Nama (Rp ...)" HANYA utk holding multi-pemilik (>1 baris porsi>0); dasar nominal = nilai holding.
+      let ownersLine = '';
+      try {
+        const ow = Investment.getOwners(h);
+        if (Array.isArray(ow) && ow.filter((o) => o && Number(o.porsi) > 0).length > 1 && typeof ownerShareLine === 'function') {
+          ownersLine = '<div class="u-fs10 u-t2">👥 ' + ownerShareLine(ow, value) + '</div>';
+        }
+      } catch (err) { ownersLine = ''; }
       const warnText = renderError ? 'Gagal menghitung nilai holding ini — tap untuk buka & cek datanya' : warn;
       const warnChip = warnText ? ' <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="' + escapeHtml(warnText) + '">⚠️</span>' : '';
       return '<div class="tx-item u-pointer" data-action="InvestmentListUI.openModal" data-args="' + escapeHtml(JSON.stringify([h.id])) + '">'
@@ -257,6 +265,7 @@ const InvestmentListUI = {
         + '<div class="tx-info">'
         + '<div class="tx-name">' + escapeHtml(h.name || '(tanpa nama)') + warnChip + '</div>'
         + '<div class="tx-meta"><span class="acc-chip">' + escapeHtml(h.type || '-') + '</span> ' + (h.unit || 0) + ' unit · ROI ' + (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%</div>'
+        + ownersLine
         + '</div>'
         + '<div class="tx-amount"><div>' + fmt(value) + '</div><div class="u-fs11 ' + cls + '">' + (gain >= 0 ? '+' : '') + fmt(gain) + '</div></div>'
         + '</div>';

@@ -720,6 +720,7 @@ const InvestmentUI = {
     const result = calculateRemainingShare(draft, editedIndex);
     if (!result) return;
     draft[result.targetIndex].porsi = result.porsi;
+    draft[result.targetIndex]._auto = true;
     const porsiEl = document.getElementById('investOwnerPorsi' + result.targetIndex);
     if (porsiEl) porsiEl.value = result.porsi;
     const value = InvestmentUI._ownersHoldingValue();

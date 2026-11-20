@@ -207,7 +207,7 @@ const res=MultiOwnerEngine.getOwners(a);
 if(!res||!res.ok||!res.isMultiOwner){box.textContent='';box.classList.add('u-dnone');return;}
 const nonSelf=res.owners.filter(o=>!o.isSelf);
 if(!nonSelf.length){box.textContent='';box.classList.add('u-dnone');return;}
-const parts=nonSelf.map(o=>escapeHtml(o.ownerName)+' '+o.porsi+'%').join(', ');
+const parts=(typeof ownerShareLine==='function')?ownerShareLine(nonSelf,(typeof a.nilai==='number'?a.nilai:0),{persenDulu:false,onlyPositive:false,sep:', '}):nonSelf.map(o=>escapeHtml(o.ownerName)+' '+o.porsi+'%').join(', ');
 box.innerHTML='💰 Ada dana titipan/patungan: '+parts+' — atur lewat tombol "⚖️ Atur Porsi Kepemilikan" di bawah.';
 box.classList.remove('u-dnone');
 },
@@ -374,7 +374,7 @@ let ownersLine='';
 if(typeof Investment!=='undefined'){
 const owners=Investment.getOwners(h);
 if(owners&&owners.length){
-ownersLine=owners.filter(o=>o.porsi>0).map(o=>Math.round(o.porsi)+'% '+escapeHtml(o.ownerName||'?')).join(' · ');
+ownersLine=(typeof ownerShareLine==='function'&&typeof Investment.holdingValue==='function')?ownerShareLine(owners,Investment.holdingValue(h)):owners.filter(o=>o.porsi>0).map(o=>Math.round(o.porsi)+'% '+escapeHtml(o.ownerName||'?')).join(' · ');
 }
 }
 return '🔗 Terhubung ke Investasi: '+escapeHtml(h.name||'?')+(ownersLine?(' · Porsi: '+ownersLine):'');

@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2896';
+const MODULE_CALC_VERSION='s2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2903';
 // S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
 // fallback so this file remains independently loadable in focused tests/legacy builds.
 function _calcTxDateMs(t){
@@ -1137,6 +1137,35 @@ Kekayaan.renderSnapshots();
 }
 };
 
+// ownerNominalFromPorsi(base, porsi) / ownerPorsiFromNominal(base, nominal) / ownerShareLine(owners, base, opts)
+// -- PURE, 0 DOM. SSOT konversi Porsi (%) <-> Nominal (Rp) untuk TAMPILAN kartu kepemilikan (Akun/Aset/Investasi/Kendaraan/Proyek).
+// Nominal TIDAK pernah disimpan: selalu turunan porsi x dasar (nilai/saldo/laba). Dasar <=0 -> null (tampilkan % saja).
+function ownerNominalFromPorsi(base, porsi) {
+  const b = Number(base), p = Number(porsi);
+  if (!isFinite(b) || b <= 0 || !isFinite(p)) return null;
+  return Math.round(b * p / 100);
+}
+function ownerPorsiFromNominal(base, nominal) {
+  const b = Number(base), n = Number(nominal);
+  if (!isFinite(b) || b <= 0 || !isFinite(n)) return null;
+  return Math.round((n / b * 100) * 1e10) / 1e10;
+}
+// ownerShareLine(owners, base, opts) -- "Nama 60% (Rp 6.000.000) · Nama2 40% (Rp 4.000.000)". opts.onlyPositive (default true),
+// opts.persenDulu (default true: "60% Nama"), opts.escape (default escapeHtml bila ada).
+function ownerShareLine(owners, base, opts) {
+  opts = opts || {};
+  const esc = typeof opts.escape === 'function' ? opts.escape : (typeof escapeHtml === 'function' ? escapeHtml : String);
+  const money = typeof fmtFull === 'function' ? fmtFull : (n) => 'Rp ' + n;
+  const list = (Array.isArray(owners) ? owners : []).filter((o) => o && (opts.onlyPositive === false || Number(o.porsi) > 0));
+  return list.map((o) => {
+    const p = Number(o.porsi) || 0, pc = String(Number(p.toFixed(4)));
+    const nm = esc(String(o.ownerName || o.ownerId || '?'));
+    const nom = ownerNominalFromPorsi(base, p);
+    const tail = nom === null ? '' : ' (' + money(nom) + ')';
+    return opts.persenDulu === false ? (nm + ' ' + pc + '%' + tail) : (pc + '% ' + nm + tail);
+  }).join(opts.sep || ' · ');
+}
+
 // calculateRemainingShare(rows, editedIndex) -- SESI AF1 (fitur "Auto-fill Sisa Porsi", lihat
 // DESIGN-LOCK-autofill-sisa-porsi.md). PURE, 0 DOM -- util bersama dipakai oleh 3 modal porsi
 // kepemilikan (Aset.onOwnerPorsiInput/onOwnerNominalInput di aset.js, InvestmentUI.onOwnerPorsiInput/
@@ -1164,7 +1193,7 @@ function calculateRemainingShare(rows, editedIndex) {
   for (let k = 0; k < rows.length; k++) {
     if (k === editedIndex || !rows[k]) continue;
     const p = typeof rows[k].porsi === 'number' && isFinite(rows[k].porsi) ? rows[k].porsi : 0;
-    if (!rows[k]._touched && p <= 0) { targetIndex = k; break; }
+    if (!rows[k]._touched && (p <= 0 || rows[k]._auto === true)) { targetIndex = k; break; }
   }
   if (targetIndex === -1) return null;
   let totalOther = 0;

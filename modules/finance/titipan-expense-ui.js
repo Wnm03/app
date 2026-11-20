@@ -209,10 +209,19 @@ const TitipanExpenseUI = {
           ? `<input type="number" class="fi" id="titipanExpenseOwnerPorsi${i}" style="width:70px" placeholder="%" inputmode="decimal" value="${o.porsi !== null && o.porsi !== undefined ? o.porsi : ''}" data-oninput="TitipanExpenseUI.onPorsiInput" data-oninput-args='[${i},"$value"]'>`
           : `<span style="width:70px;text-align:right;font-size:12px;color:var(--text2)">${o.porsi !== null && o.porsi !== undefined ? o.porsi : ''}%</span>`;
       }
+      let nominalField = '';
+      if (selectedCount > 1 && o.selected) {
+        const amt = this._readAmount();
+        const nomVal = (amt > 0 && o.porsi !== null && o.porsi !== undefined && isFinite(o.porsi)) ? Math.round(amt * o.porsi / 100) : '';
+        nominalField = (this._splitMode === 'manual')
+          ? `<input type="text" class="fi" id="titipanExpenseOwnerNominal${i}" style="width:104px" placeholder="Rp" inputmode="decimal" value="${nomVal}" data-oninput="TitipanExpenseUI.onNominalInput" data-oninput-args='[${i},"$value"]'>`
+          : `<span id="titipanExpenseOwnerNominal${i}" style="width:104px;text-align:right;font-size:12px;color:var(--text2)">${nomVal === '' ? '' : (typeof fmt === 'function' ? fmt(nomVal) : nomVal)}</span>`;
+      }
       return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
         <input type="checkbox" style="width:16px;height:16px" ${o.selected ? 'checked' : ''} data-onchange="TitipanExpenseUI.toggleOwner" data-onchange-args='[${i},"$checked"]'>
         <span style="flex:1;font-size:13px">${escapeHtml(o.ownerName)}</span>
         ${porsiField}
+        ${nominalField}
       </label>`;
     }).join('');
   },
@@ -312,12 +321,55 @@ const TitipanExpenseUI = {
   onPorsiInput(i, val) {
     if (!this._draft[i]) return;
     this._draft[i].porsi = (val === '' || val === null || typeof val === 'undefined') ? null : parseFloat(val);
+    this._syncNominals(i);
     this._updateSplitPreview();
+  },
+
+  // onNominalInput(i, val) — arah sebaliknya: isi Nominal (Rp) -> porsi (%) dihitung dari Jumlah (presisi 1e-10).
+  // Hanya draft.porsi yang jadi sumber (nominal tidak disimpan). Dengan 2 owner tercentang, owner lain otomatis jadi sisa 100%.
+  onNominalInput(i, val) {
+    if (!this._draft[i]) return;
+    const amt = this._readAmount();
+    if (!(amt > 0)) return;
+    const n = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+    this._draft[i].porsi = Math.round(((isFinite(n) ? n : 0) / amt * 100) * 1e10) / 1e10;
+    const pe = document.getElementById('titipanExpenseOwnerPorsi' + i);
+    if (pe) pe.value = this._draft[i].porsi;
+    this._autoFillOther(i);
+    this._syncNominals(-1, i);
+    this._updateSplitPreview();
+  },
+
+  // _autoFillOther(i) — tepat 2 owner tercentang: yang satunya = 100 - porsi baris i (auto-fill sisa).
+  _autoFillOther(i) {
+    const sel = this._draft.map((o, k) => k).filter((k) => this._draft[k].selected);
+    if (sel.length !== 2 || !sel.includes(i)) return;
+    const t = sel[0] === i ? sel[1] : sel[0];
+    const mine = Number(this._draft[i].porsi) || 0;
+    this._draft[t].porsi = Math.max(0, Math.round((100 - mine) * 1e10) / 1e10);
+    const pe = document.getElementById('titipanExpenseOwnerPorsi' + t);
+    if (pe) pe.value = this._draft[t].porsi;
+  },
+
+  // _syncNominals(skipPorsiIdx, skipNominalIdx) — tulis ulang kolom Nominal (Rp) semua owner tercentang dari porsi x Jumlah.
+  _syncNominals(skipP, skipN) {
+    if (skipP >= 0) this._autoFillOther(skipP);
+    const amt = this._readAmount();
+    this._draft.forEach((o, k) => {
+      if (!o.selected) return;
+      const pe = document.getElementById('titipanExpenseOwnerPorsi' + k);
+      if (pe && k !== skipP && o.porsi !== null && o.porsi !== undefined) pe.value = o.porsi;
+      const ne = document.getElementById('titipanExpenseOwnerNominal' + k);
+      if (!ne || k === skipN) return;
+      const v = (amt > 0 && o.porsi !== null && o.porsi !== undefined && isFinite(o.porsi)) ? Math.round(amt * o.porsi / 100) : '';
+      if ('value' in ne && ne.tagName !== 'SPAN') ne.value = v; else ne.textContent = v === '' ? '' : (typeof fmt === 'function' ? fmt(v) : String(v));
+    });
   },
 
   // onAmtInput() — dipanggil dari oninput field Jumlah (lihat catatan
   // wiring §3 di atas file). Cuma update preview split, TIDAK menyentuh D.
   onAmtInput() {
+    this._syncNominals(-1, -1);
     this._updateSplitPreview();
   },
 

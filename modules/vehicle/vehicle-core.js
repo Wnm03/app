@@ -144,7 +144,7 @@ let ownersLine='';
 if(typeof MultiOwnerEngine!=='undefined'){
 const res=MultiOwnerEngine.getOwners(a);
 if(res&&res.ok&&res.isMultiOwner){
-ownersLine=res.owners.filter(o=>o.porsi>0).map(o=>Math.round(o.porsi)+'% '+escapeHtml(o.ownerName||'?')).join(' · ');
+ownersLine=(typeof ownerShareLine==='function')?ownerShareLine(res.owners,a.nilai):res.owners.filter(o=>o.porsi>0).map(o=>Math.round(o.porsi)+'% '+escapeHtml(o.ownerName||'?')).join(' · ');
 }
 }
 const nilaiText=typeof fmtFull==='function'?fmtFull(a.nilai||0):('Rp '+(a.nilai||0));

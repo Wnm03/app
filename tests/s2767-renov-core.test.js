@@ -146,7 +146,7 @@ test('S2767 E: import CSV preview, anti-duplikat, dan konfirmasi menambah rencan
   const document={getElementById:()=>null,body:{appendChild:()=>{}},createElement:()=>{inputRef={style:{},files:[{size:200,text:async()=> 'Nama;Kategori;Ukuran;Harga\nKeramik;Material;40x40;1000\nCat;Material;5 liter;2000\nItem tanpa harga;Material;;0'}],addEventListener:(name,fn)=>{inputRef.handler=fn;},click(){inputRef.changePromise=inputRef.handler();},remove(){}};return inputRef;}};
   const ctx=loadSource(['modules/home/renovasi.js'],{D,document,sameId:(a,b)=>String(a)===String(b),escapeHtml:s=>String(s),fmt:n=>String(n),fmtFull:n=>String(n),toast:()=>{},save:()=>true,uid:(()=>{let n=0;return()=>`new${++n}`;})(),todayStr:()=> '2026-11-14',askConfirm:async text=>{acceptedText=text;return true;},closeModal:()=>{},openModal:()=>{}},['Renov']);
   await ctx.Renov.importCSV(1);await inputRef.changePromise;
-  assert.match(acceptedText,/1 item valid, 2 baris tidak valid/);assert.equal(p.items.length,2);assert.equal(p.items[1].name,'Cat');assert.equal(p.items[1].paid,false);assert.equal(D.transactions.length,0);
+  assert.match(acceptedText,/1 item baru, 1 dilewati karena sudah ada.*, 1 baris tidak valid/);assert.equal(p.items.length,2);assert.equal(p.items[1].name,'Cat');assert.equal(p.items[1].paid,false);assert.equal(D.transactions.length,0);
 });
 
 test('S2767 E: export PDF memakai ensureJsPDF dan menyimpan dokumen saat library tersedia',async()=>{
