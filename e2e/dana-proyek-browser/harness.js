@@ -1,5 +1,7 @@
 const fs=require('fs'),path=require('path'),http=require('http');
-const {chromium}=require('/opt/npm-tools/node_modules/playwright');
+let chromium;
+for(const m of ['playwright','playwright-core','/opt/npm-tools/node_modules/playwright']){try{({chromium}=require(m));break;}catch(e){void e;}}
+if(!chromium)throw new Error('Playwright tidak ditemukan (npm i -g playwright, atau pasang di /opt/npm-tools)');
 const ROOT=process.env.ROOT;
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
 exports.start=async function(vp={width:390,height:844},mobile=true){

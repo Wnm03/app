@@ -700,6 +700,15 @@ build() {
     });
   }
 
+  // S2896: penerima bagi hasil proyek renovasi (utang renovBagiProjectId belum lunas) tampil di Dana Titipan walau belum punya Pokok/holding. Append-only.
+  if (D && Array.isArray(D.debts)) {
+    D.debts.forEach((d) => {
+      if (!d || d.lunas === true || d.renovBagiProjectId == null || !d.linkedOwnerId) return;
+      if (!(Number(d.nilai) > 0) || ownersMap.has(d.linkedOwnerId)) return;
+      ownersMap.set(d.linkedOwnerId, { ownerId: d.linkedOwnerId, ownerName: (d.name && String(d.name).trim()) || 'Pemilik dana titipan', allocatedPrincipal: 0, currentValue: 0, gain: 0, holdings: [] });
+    });
+  }
+
   const commitments = (D && Array.isArray(D.titipanCommitments)) ? D.titipanCommitments : [];
   const commitMap = new Map();
   commitments.forEach((c) => {
@@ -760,8 +769,24 @@ build() {
     debtPinjamMap.set(d.autoTitipanOwnerId, (debtPinjamMap.get(d.autoTitipanOwnerId) || 0) + amt);
   });
 
+  // S2896: hak bagi hasil proyek renovasi yang belum dibayar (dana tertahan). MURNI tampilan: TIDAK masuk usedTotal/estimatedUnallocated/available.
+  const bagiHasilMap = new Map();
+  const bagiHasilKoreksiSet = new Set();
+  debtsList.forEach((d) => {
+    if (!d || d.lunas === true || d.renovBagiProjectId == null || !d.linkedOwnerId) return;
+    const amt = isFinite(d.nilai) ? Number(d.nilai) : 0;
+    bagiHasilMap.set(d.linkedOwnerId, (bagiHasilMap.get(d.linkedOwnerId) || 0) + amt);
+    // S2897: proyek yang laba diakuinya melebihi laba maks hidup (mis. pemasukan DP dihapus setelah laba diakui) -> nilai utang menunggu koreksi laba. Hanya penanda tampilan.
+    try {
+      const pr = (D && Array.isArray(D.renovProjects)) ? D.renovProjects.find((x) => x && String(x.id) === String(d.renovBagiProjectId)) : null;
+      if (pr && typeof renovLabaSummary === 'function' && renovLabaSummary(pr).koreksiDiperlukan) bagiHasilKoreksiSet.add(d.linkedOwnerId);
+    } catch (_e) { void _e; }
+  });
+
   const owners = Array.from(ownersMap.values());
   owners.forEach((o) => {
+    o.bagiHasilTotal = bagiHasilMap.get(o.ownerId) || 0;
+    o.bagiHasilKoreksi = bagiHasilKoreksiSet.has(o.ownerId);
     o.debtPinjamTotal = debtPinjamMap.get(o.ownerId) || 0;
     o.holdings.sort((x, y) => y.allocatedPrincipal - x.allocatedPrincipal);
     const commit = commitMap.get(o.ownerId);

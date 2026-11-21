@@ -342,7 +342,8 @@ if(!Array.isArray(it.payments)){
 it.payments=(it.paid&&it.txId)?[{id:uid(),txId:it.txId,amount:Math.max(0,Number(it.harga)||0),date:it.paidDate||it.tglBayar||tx.date,accountId:it.accountId||tx.accountId,label:'Pembayaran'}]:[];
 }
 const paymentId=uid();
-it.payments.push({id:paymentId,txId:tx.id,amount:amt,date:tx.date,accountId:tx.accountId,label:tx.label||(bill.kind==='cicilan'?'Cicilan':'Tagihan')});
+const _sdProyek=p.dana==='klien'&&renovProjectAccountIds(p.id).has(String(tx.accountId))&&!renovAccountOwners(tx.accountId).some(o=>o&&!_rfsSelf(o.ownerId))&&!(tx.deductionOwnerId&&!_rfsSelf(tx.deductionOwnerId));
+it.payments.push({id:paymentId,txId:tx.id,amount:amt,date:tx.date,accountId:tx.accountId,label:tx.label||(bill.kind==='cicilan'?'Cicilan':'Tagihan'),...(_sdProyek?{sumberDana:'proyek'}:{})});
 const paidSum=it.payments.reduce((s,x)=>s+Math.max(0,Number(x&&x.amount)||0),0);
 // Harga item: cicilan = porsi per periode x tenor (rencana total); tagihan berulang tak punya total pasti -> ikut total terbayar.
 const planned=(bill.kind==='cicilan'&&Number(bill.tenor)>0)?Math.round((Number(bill.amount)||amt)*Number(bill.tenor)):0;
@@ -453,13 +454,16 @@ const s=new Set();
 (D.transactions||[]).forEach(t=>{if(t&&t.type==='income'&&t.renovDpProjectId!=null&&t.renovDpProjectId!==''&&String(t.renovDpProjectId)===String(pid)&&t.accountId)s.add(String(t.accountId));});
 return s;
 }
+// S2896: pemilik SELF (resolver default mengembalikan [{ownerId:'SELF'}] utk akun biasa) BUKAN titipan -> tidak lagi berlabel "Titipan · Milik Sendiri".
+function _rfsSelf(id){return String(id==null?'':id).trim().toUpperCase()==='SELF';}
 function renovFundSource(tx,projAccIds){
 if(!tx)return{kind:'tanpa',ownerId:'',ownerName:''};
 const owners=renovAccountOwners(tx.accountId),ownerId=tx.deductionOwnerId||'';
+const nonSelf=owners.filter(x=>x&&!_rfsSelf(x.ownerId));
 const nameOf=id=>{const o=owners.find(x=>x.ownerId===id);return(o&&(o.ownerName||o.ownerId))||id||'';};
-if(ownerId)return{kind:'titipan',ownerId,ownerName:nameOf(ownerId)};
+if(ownerId&&!_rfsSelf(ownerId))return{kind:'titipan',ownerId,ownerName:nameOf(ownerId)};
 if(projAccIds&&projAccIds.has(String(tx.accountId)))return{kind:'proyek',ownerId:'',ownerName:''};
-if(owners.length)return{kind:'titipan',ownerId:'',ownerName:''};
+if(nonSelf.length)return{kind:'titipan',ownerId:'',ownerName:''};
 return{kind:'talangan',ownerId:'',ownerName:''};
 }
 // renovFundBreakdown(p) -> total terbayar per sumber dana; jumlah semua sumber == total "Terbayar Item" proyek.

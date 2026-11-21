@@ -78,7 +78,8 @@ const FinanceAllocationAPI = {
         return blocked('INVALID_ACTIVE_DEBT_AMOUNT', 'Ada utang aktif dengan nominal tidak valid; kas bebas belum aman dihitung.');
       }
       if (debtAmount === 0) continue;
-      if (debt.linkedAssetId || debt.linkedInvestmentId || debt.linkedAccountId) continue;
+      // S2896: utang bagian bagi hasil proyek renovasi = dana tertahan (sudah keluar dari kas bebas), bukan kewajiban berjadwal.
+      if (debt.linkedAssetId || debt.linkedInvestmentId || debt.linkedAccountId || debt.renovBagiProjectId != null) continue;
       // Missing/null installment keeps the legacy unscheduled-debt path (which
       // fails closed below). Explicit malformed values must not be coerced to 0/1.
       const rawInstallment = debt.cicilanBulanan;

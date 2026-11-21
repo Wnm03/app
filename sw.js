@@ -1,6 +1,6 @@
 // Service Worker - Keluarga W
 // S1818: cache only static app assets; keep navigations fresh when online.
-const CACHE_NAME = 'kw-cache-v2903';
+const CACHE_NAME = 'kw-cache-v2910';
 const CACHE_PREFIX = 'kw-cache-';
 const PRECACHE_URLS = [
   './index.html',
@@ -12,6 +12,11 @@ const PRECACHE_URLS = [
   './tokens.css',
   './app-bundle-a.min.js',
   './app-bundle-b.min.js',
+  './nav-scroll.js',
+  './modules/shared/boot-early.js',
+  './modules/shared/segmented-control.js',
+  './modules/shared/bundle-load-guard.js',
+  './modules/shared/modal-write.js',
   './modules/shared/smoke-test.js',
   './manifest.json',
   './icon-192.svg',
@@ -35,16 +40,24 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then((cache) => cache.addAll(PRECACHE_URLS).catch(async (err) => {
+        // S2897: addAll atomik — satu URL gagal mengosongkan seluruh cache. Isi satu per satu agar sisanya tetap tersedia offline.
+        console.warn('[SW] Precache addAll gagal, isi satu per satu:', err);
+        await Promise.all(PRECACHE_URLS.map((u) => cache.add(u).catch(() => {})));
+      }))
       .catch((err) => console.warn('[SW] Precache gagal:', err))
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(
-      keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))
-    )).then(() => self.clients.claim())
+    caches.keys().then(async (keys) => {
+      // S2897: jangan hapus cache lama bila cache baru kosong (precache gagal total); biarkan cache lama jadi cadangan offline.
+      let baruTerisi = true;
+      try { baruTerisi = (await (await caches.open(CACHE_NAME)).keys()).length > 0; } catch (_e) { baruTerisi = true; }
+      if (!baruTerisi) return;
+      await Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key)));
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -72,6 +85,9 @@ self.addEventListener('fetch', (event) => {
       }).catch(async () => {
         const cached = await caches.match(event.request);
         if (cached) return cached;
+        // S2897: precache tanpa ?v=, halaman meminta ?v=<build>; cadangan abaikan query.
+        const loose = await caches.match(event.request, { ignoreSearch: true });
+        if (loose) return loose;
         const shell = await caches.match('./index.html');
         if (shell) return shell;
         return new Response('Offline atau resource tidak tersedia', {
@@ -98,6 +114,9 @@ self.addEventListener('fetch', (event) => {
     }).catch(async () => {
       const cached = await caches.match(request);
       if (cached) return cached;
+      // S2897: cadangan abaikan query (?v=) agar aset precache tetap terpakai offline.
+      const loose = await caches.match(request, { ignoreSearch: true });
+      if (loose) return loose;
       return new Response('Resource tidak tersedia', {
         status: 503,
         statusText: 'Service Unavailable'

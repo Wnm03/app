@@ -167,7 +167,7 @@ const DashboardHubOverview = {
       if (!s.composition || !s.composition.ok || !s.composition.totalValue) return null;
       const c = (s.composition && s.composition.ok) ? s.composition : null;
       const rows = [];
-      if (c) { rows.push(['Kas & akun', _dhoMoney(c.cashValue)]); rows.push(['Aset fisik', _dhoMoney(c.assetValue)]); if (c.investmentValue) rows.push(['Investasi', _dhoMoney(c.investmentValue)]); }
+      if (c) { rows.push(['Kas & akun', _dhoMoneySigned(c.cashValue)]); rows.push(['Aset fisik', _dhoMoney(c.assetValue)]); if (c.investmentValue) rows.push(['Investasi', _dhoMoney(c.investmentValue)]); }
       // Audit Beranda: angka utama = Kekayaan.currentNetWorth() (kas+aset+investasi+inventori bisnis+piutang-utang),
       // tapi baris dulu hanya komposisi portofolio -> baris tidak menjumlah ke total & "debt" dihitung salah
       // (portfolio-net bernilai negatif saat ada piutang/stok). Sekarang tiap komponen net worth dibaca dari SSOT-nya.

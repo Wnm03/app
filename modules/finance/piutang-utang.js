@@ -828,13 +828,13 @@ if(!d){toast('⚠️ Utang tidak ditemukan, coba tutup dan buka lagi');return;}
 // transaksi. Jangan izinkan form utang mengubahnya secara independen; hanya
 // status lunas yang boleh diubah di sini. Perubahan nominal harus lewat edit
 // transaksi sumber agar sinkronisasi delta tetap berjalan.
-if(_bdpTitipanPinjamTxAlive(d)){
+if(_bdpTitipanPinjamTxAlive(d)||d.renovBagiProjectId!=null){
 BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.lunas=Debt._lunasState;});
 const _pinjamPersist=save();
 if(_pinjamPersist===false){_bdpAtomicRestore(_snap);toast('⚠️ Status utang tidak disimpan karena state sudah berubah. Muat ulang lalu coba lagi.');return false;}
 closeModal('debtModal');Debt.renderList();renderKekayaanBersih();hitungZakatMaal();renderBillList();checkBills();
 if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:"edit-status",debtId:d.id,auto:true,source:"titipan-pinjam"});
-toast('✅ Status lunas tersimpan. Pokok utang tetap mengikuti transaksi Dana Titipan.');return true;
+toast(d.renovBagiProjectId!=null?'✅ Status lunas tersimpan. Nilai utang mengikuti bagi hasil proyek.':'✅ Status lunas tersimpan. Pokok utang tetap mengikuti transaksi Dana Titipan.');return true;
 }
 // AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.2: transisi Belum Lunas -> Lunas
 // pada utang yang PUNYA linkedTxId otomatis mencatat 1 transaksi
@@ -910,6 +910,11 @@ BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.billId=bill.id;})
 async delete(id){
 if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
 const d=D.debts.find(x=>sameId(x.id,id));
+// S2896: utang bagian bagi hasil proyek (renovBagiProjectId) dibuat & diselaraskan otomatis dari ledger laba; hanya status lunas yang boleh diubah.
+if(d&&d.renovBagiProjectId!=null){
+if(typeof toast==='function')toast('Utang ini dibuat otomatis dari bagi hasil proyek renovasi dan tidak bisa dihapus langsung. Koreksi laba atau ubah porsi bagi hasil di proyek terkait.',3600);
+return false;
+}
 if(d&&(d.linkedAssetId||d.linkedInvestmentId||d.linkedAccountId)){
 if(typeof toast==='function')toast('Entri ini tersinkron otomatis dari porsi kepemilikan Aset/Akun/Investasi patungan, tidak bisa dihapus langsung. Ubah porsi kepemilikannya ke 0% atau lepas tautannya di menu Aset/Akun/Investasi terkait.',3600);
 return;
@@ -961,7 +966,7 @@ if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated"
 // Bersih (double-subtraction, lihat BUG-016). Entry ini TETAP tampil apa
 // adanya di Debt.renderList() (histori/badge "🔒 Titipan" tidak berubah)
 // -- cuma tidak ikut diakumulasi ke Total Utang/Kekayaan Bersih lagi.
-totalValue(){return(D.debts||[]).filter(isDebtOwnershipSelf).filter(d=>!d.lunas).filter(d=>!d.linkedAssetId&&!d.linkedInvestmentId).filter(d=>!isDebtAkunLuarSaldo(d)).reduce((s,d)=>s+(d.nilai||0)*(resolveEntryAssetSelfPorsi(d)/100),0);},
+totalValue(){return(D.debts||[]).filter(isDebtOwnershipSelf).filter(d=>!d.lunas).filter(d=>!d.linkedAssetId&&!d.linkedInvestmentId&&d.renovBagiProjectId==null).filter(d=>!isDebtAkunLuarSaldo(d)).reduce((s,d)=>s+(d.nilai||0)*(resolveEntryAssetSelfPorsi(d)/100),0);},
 totalCicilanBulanan(){return(D.debts||[]).filter(isDebtOwnershipSelf).filter(d=>!d.lunas).reduce((s,d)=>s+(d.cicilanBulanan||0),0);},
 // billCicilanAktif() — KW-170: cicilan barang aktif dari Buku Tagihan
 // (D.bills kind:'cicilan', sisaTenor>0) — dianggap "utang beneran": ikut
@@ -1029,6 +1034,8 @@ if(d.assetId){const _porsi=resolveEntryAssetSelfPorsi(d);if(_porsi<100)metaParts
 // 0 filter/badge lain diubah.
 const isTitipanLinked=!!(d.linkedAssetId||d.linkedInvestmentId||d.linkedAccountId);
 if(isTitipanLinked)metaParts.push('🔒 Titipan — bukan kewajiban dibayar');
+const isBagiHasil=d.renovBagiProjectId!=null;
+if(isBagiHasil)metaParts.push('🔒 Bagi hasil proyek — dana tertahan, nilai otomatis');
 // AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.4: badge terpisah (semantik beda
 // dari titipan di atas) utk utang yang tercatat lewat toggle §5.1.
 if(_bdpLinkedTxAlive(d)&&!isTitipanLinked)metaParts.push('🔒 Tercatat otomatis dari transaksi arus kas');
@@ -1041,7 +1048,9 @@ if(isTitipanPinjamTxLinked&&!isTitipanLinked&&!isTxLinked)metaParts.push('🔒 P
 // tap-delete lalu bingung baris itu balik lagi (root cause: Debt.delete()
 // di atas). Debt.delete() sendiri TETAP punya guard-nya sendiri (defense in
 // depth) kalau tombol ini terpanggil lewat jalur lain.
-const delBtnHtml=isTitipanLinked
+const delBtnHtml=isBagiHasil
+?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Dibuat otomatis dari bagi hasil proyek renovasi — koreksi laba atau ubah porsi di proyek terkait">🔒</span>'
+:isTitipanLinked
 ?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tersinkron otomatis dari porsi kepemilikan Aset/Akun/Investasi patungan — ubah porsinya ke 0% atau lepas tautannya di sana untuk menghapus baris ini">🔒</span>'
 :(isTxLinked||isTitipanPinjamTxLinked
 ?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Terhubung ke transaksi sumber — edit atau hapus dari transaksi tersebut">🔒</span>'
@@ -1111,7 +1120,7 @@ activeDebts(){
 // linkedAssetId sejak awal), jadi salah masuk activeDebts() & ikut
 // disimulasikan snowball/avalanche padahal bukan kewajiban riil.
 // FIX (S2843): exclude JUGA entri "Dana titipan akun" (linkedAccountId, TitipanSync) -- bukan kewajiban yg dilunasi lewat strategi (bunga/cicilan 0, tanpa jatuh tempo); sama alasan linkedAssetId/linkedInvestmentId di atas. Debt.totalValue()/Buku Utang TIDAK diubah di sini.
-const real=(D.debts||[]).filter(d=>!d.lunas&&(d.nilai||0)>0&&!d.linkedAssetId&&!d.linkedInvestmentId&&!d.linkedAccountId);
+const real=(D.debts||[]).filter(d=>!d.lunas&&(d.nilai||0)>0&&!d.linkedAssetId&&!d.linkedInvestmentId&&!d.linkedAccountId&&d.renovBagiProjectId==null);
 return real.concat(DebtStrategy.billCicilanAsDebtLike());
 },
 // billCicilanAsDebtLike() — KW-170: map cicilan barang aktif (Debt.

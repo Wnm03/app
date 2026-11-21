@@ -1,0 +1,16 @@
+process.env.ROOT=require('path').resolve(process.env.ROOT||require('path').join(__dirname,'..','..'));
+const h=require('../dana-proyek-browser/harness');const fs=require('fs');
+const BK=JSON.parse(fs.readFileSync(process.env.BACKUP,'utf8'));
+(async()=>{const H=await h.start({width:390,height:844},true);const p=H.p,ev=(f,a)=>p.evaluate(f,a),sleep=ms=>p.waitForTimeout(ms);
+ await ev(async bk=>{Object.keys(D).forEach(k=>delete D[k]);Object.assign(D,bk);const s=JSON.stringify(D);localStorage.setItem('kw_v4',s);await IDBStore.set('kw_v4_mirror',s);},BK);await p.reload();await p.waitForFunction(()=>getComputedStyle(document.getElementById('mainApp')).display!=='none');await sleep(1200);
+ const PID='1794663148350';
+ const snap=()=>ev(id=>{const pr=D.renovProjects.find(x=>String(x.id)===id);const sm=renovLabaSummary(pr);return{dp:D.transactions.filter(t=>t.type==='income'&&String(t.renovDpProjectId)===id).length,status:sm.status,diakui:sm.labaDiakuiBersih,labaMaks:sm.labaMaks,koreksi:sm.koreksiDiperlukan,debt:(D.debts||[]).filter(x=>String(x.renovBagiProjectId)===id).map(x=>x.nilai),hak:renovHakSelf(pr)&&renovHakSelf(pr).hak,batas:sm.batasPencairan};},PID);
+ await ev(id=>{const pr=D.renovProjects.find(x=>String(x.id)===id);renovTandaiSelesai(pr,{semuaBiayaTercatat:true});renovAkuiLaba(pr,renovLabaSummary(pr).bisaAkui,{kunci:'a1'});},PID);
+ console.log('sebelum',JSON.stringify(await snap()));
+ const r=await ev(async id=>{window.askConfirm=async()=>true;const tx=D.transactions.find(t=>t.type==='income'&&String(t.renovDpProjectId)===id);try{await Promise.race([delTx(tx.id),new Promise(r=>setTimeout(r,8000))]);}catch(e){return 'ERR '+e.message;}return 'ok';},PID);
+ await sleep(1000);console.log('delTx',r);
+ console.log('sesudah hapus DP',JSON.stringify(await snap()));
+ const pg=await ev(async id=>{Renov.openDetail(id);await new Promise(r=>setTimeout(r,500));return /Koreksi diperlukan/.test(document.getElementById('renovDetailModal').innerText);},PID);console.log('panel detail memperingatkan koreksi?',pg);
+ console.log('cair coba hak:',JSON.stringify(await ev(id=>{const pr=D.renovProjects.find(x=>String(x.id)===id);return renovCairkanLaba(pr,1000,{kunci:'x'});},PID)).slice(0,200));
+ console.log('kartu titipan (S2897: harus menandai menunggu koreksi laba):',JSON.stringify(await ev(async()=>{showPage('keuangan');setKeuanganTab('laporan');setLaporanTab('titipan');await new Promise(r=>setTimeout(r,700));return [...document.querySelectorAll('#danaTitipanTabList [id^=titipanOwnerCard_]')].map(x=>x.textContent.replace(/\s+/g,' ')).filter(t=>/Bagi hasil/i.test(t)).map(t=>/menunggu koreksi laba/.test(t)?'ADA penanda':'TANPA penanda');})));
+ await H.close();})().catch(e=>{console.error('ERR',e.message);process.exit(2);});

@@ -130,7 +130,7 @@ const FinanceDashboard = {
       SURPLUS: { value: 'Surplus proyeksi', cls: 'green' },
     };
     const state = labels[result.status] || { value: 'Data belum cukup', cls: 'orange' };
-    const projected = Number.isFinite(result.projectedEndingBalance) ? `Saldo akhir proyeksi: ${money(result.projectedEndingBalance)}. ` : '';
+    const projected = Number.isFinite(result.projectedEndingBalance) ? `Saldo akhir proyeksi: ${(result.projectedEndingBalance < 0 ? '-' : '') + money(Math.abs(result.projectedEndingBalance))}. ` : '';
     const actual = result.actualFreeCashVerified
       ? (result.investmentAllowed
         ? `Kas setelah kewajiban dan cadangan: ${money(result.safeInvestableAmount)}. `
@@ -224,7 +224,8 @@ const FinanceDashboard = {
       return { icon: '💰', label: 'Kekayaan Bersih', value: '—', cls: '', onClick };
     }
     const saldo = (typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
-    const debt = totalDebtValue();
+    // S2896 (lanjutan): label "Utang" memakai SSOT FI.totalDebt() (Buku Utang + cicilan + utang jatuh tempo) — sama dgn rumus Kekayaan Bersih & baris "Kewajiban/utang" di Beranda. Sebelumnya hanya Buku Utang (totalDebtValue) sehingga angkanya beda dari kartu lain.
+    const debt = (typeof FI !== 'undefined' && FI && typeof FI.totalDebt === 'function') ? FI.totalDebt() : totalDebtValue();
     const net = Kekayaan.currentNetWorth();
     return {
       icon: '💰',

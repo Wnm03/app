@@ -111,7 +111,13 @@ const DanaTitipanPortfolioPresenter = {
   },
 
   // S2893 — _ownerStatusSentence(o): satu kalimat status per pemilik. terpakai = pokok - sisa (OK) atau pokok + kelebihan (OVER_ALLOCATED).
+  // S2896 (lanjutan): bila pemilik punya hak bagi hasil proyek yang belum dibayar (o.bagiHasilTotal > 0), kalimat status ditambah akhiran supaya terlihat tanpa membuka "Detail lengkap". Murni tampilan; tanpa bagi hasil kalimat PERSIS seperti semula.
   _ownerStatusSentence(o) {
+    const t = this._ownerStatusSentenceBase(o);
+    const b = Number(o && o.bagiHasilTotal) || 0;
+    return b > 0 ? t + ' · Bagi hasil proyek belum dibayar ' + this._moneyShort(b) + (o && o.bagiHasilKoreksi ? ' (menunggu koreksi laba)' : '') : t;
+  },
+  _ownerStatusSentenceBase(o) {
     if (!o || o.principalAmount === null || o.principalAmount === undefined) {
       const cmp = o ? this._expenseComparisonForOwner(o) : null;
       if (cmp && cmp.total > 0) return 'Pokok belum dicatat, terpakai ' + this._moneyShort(cmp.total) + ' dari transaksi ' + cmp.accountNames.join(', ');
@@ -820,6 +826,7 @@ const DanaTitipanPortfolioPresenter = {
               <span class="u-t2">Teralokasi ke Holding</span><span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
               <span class="u-t2">Dipakai (Transaksi Titipan)</span><span class="u-fw700">${this._money(o.usedTotal)}</span>
               <span class="u-t2">Dipinjam (Utang)</span>${this._debtPinjamCellHtml(o)}
+              ${o.bagiHasilTotal > 0 ? `<span class="u-t2">Bagi Hasil Proyek (belum dibayar${o.bagiHasilKoreksi ? ' · menunggu koreksi laba' : ''})</span><span class="u-fw700 u-pointer findash-card-sub-link" data-action="goToList" data-args="${escapeHtml(JSON.stringify(['debtList', null, null, null, null, 'utangpiutang']))}" role="button" tabindex="0" aria-label="Lihat bagi hasil proyek di Buku Utang">${this._money(o.bagiHasilTotal)}</span>` : ''}
               <span class="u-t2">Estimasi Belum Teralokasi</span><span>${this._unallocatedCell(o)}</span>
               <span class="u-t2">Nilai Saat Ini</span><span class="u-fw700">${this._money(o.currentValue)}</span>
               <span class="u-t2">Untung-Rugi</span><span class="u-fw700 ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>

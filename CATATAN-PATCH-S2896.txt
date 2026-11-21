@@ -1,0 +1,68 @@
+PATCH S2896 — basis: app-main (20). Versi build 2905 (kw-cache-v2905). Terapkan dengan menimpa file ke app-main (20); build menghapus file yatim modules/modals.js & modules/shop/modals.js (DELETE-FILES.txt sudah di basis).
+
+1) Hak penerima bagi hasil (home in) + guard pencairan
+ - Utang bagian penerima NON-SELF dicatat di Buku Utang (D.debts) saat laba diakui/dikoreksi/dicairkan/dibatalkan dan saat porsi bagi hasil disimpan. Nilai = min(nominal tersimpan, porsi dari laba diakui bersih). Diselaraskan otomatis (renovSyncBagiHasilUtang), 1 save(), rollback bila gagal. Baris lunas dipertahankan; selisih baru jadi baris terbuka.
+ - Penanda: renovBagiProjectId + renovBagiOwnerId + linkedOwnerId. Tidak memotong Kekayaan Bersih (Debt.totalValue), bukan target strategi (activeDebts), tidak memicu UNSCHEDULED_DEBT (finance-allocation-api), tidak masuk proyeksi kas (cash-projection tidak diubah: hanya membaca autoTitipanOwnerId).
+ - Dana Titipan: pemilik penerima tampil walau belum punya Pokok; baris "Bagi Hasil Proyek (belum dibayar)". Murni tampilan, tidak masuk usedTotal/estimasi belum teralokasi.
+ - Hapus utang ini ditolak; form edit hanya menyimpan status lunas. Menandai lunas HANYA mengubah status (belum ada jalur kas dari BRI; dana tertahan tidak berubah).
+ - renovCairkanLaba menolak pencairan > hak W = min(nominal tersimpan, porsi dari laba diakui) - pencairan valid. Dialog "melebihi bagian W" (S2866) tidak diubah.
+ - Penerima tanpa ownerId dilewati (tidak bisa ditautkan ke Dana Titipan). Sinkron hanya saat peristiwa di atas, bukan saat startup.
+2) isAliranKlien: sumber dana pembayaran dihitung seperti renovClientFundState (item lama tanpa payments[]; sumberDana kosong + akun tempat DP masuk = dana proyek; akun titipan/penanggung non-SELF bukan). Pembayaran tagihan baru proyek klien dari rekening DP diberi sumberDana:'proyek' (tx-renov.js).
+3) renovFundSource: pemilik SELF bukan titipan ("Titipan · Milik Sendiri" hilang; jadi rekening proyek/talangan). Angka Dana Proyek & filter laporan ikut karena memakai fungsi yang sama.
+
+Tes: tes lama pencairan-income-average (kalibrasi cash-projection) diubah 260 -> 380 dengan alasan: biaya dari rekening DP tanpa sumberDana kini dana proyek, tidak dihitung ulang sebagai pengeluaran pribadi (tes itu LULUS di basis polos; kegagalan murni akibat perbaikan #2). Tes baru: tests/s2896-renov-bagi-hasil-utang-klasifikasi-label.test.js (11 tes) dan tests/s2896-bagi-hasil-penerima-manual.test.js (4 tes: tambah penerima manual, porsi %/nominal, validasi total & nama, alur simpan -> akui laba -> utang).
+Suite penuh pada pohon hasil build: 10.238 tes, 10.237 lulus, 0 gagal (1 skip lama). verify-bundle-freshness OK, hash disinkronkan.
+Backup keluarga-W 20 Nov (skrip paritas): biaya status dana 4.307.418 = jumlah isAliranKlien; breakdown sumber = proyek 4.307.418, titipan 0; baris bagi hasil W 800.000 / home in 1.588.100. Backup belum punya ledger laba, jadi utang home in baru muncul setelah laba diakui.
+Belum diuji: browser (Chromium/Android/Safari/Firefox), perangkat fisik, Service Worker aktif, aksi simpan modal bagi hasil lewat UI.
+
+4) bhSave: penerima non-SELF yang diketik manual (nama baru, ownerId kosong) kini didaftarkan ke OwnerRegistry.findOrCreate (nama sama = ID sama, tidak dobel). Sebelumnya ownerId kosong sehingga utang/hak penerima itu tidak tercatat di Dana Titipan.
+
+=== LANJUTAN (akumulasi) — build 2909 (kw-cache-v2909) ===
+Basis tetap app-main (20). Patch ini KUMULATIF: berisi seluruh perubahan S2896 di atas + dua perbaikan tampilan di bawah. Timpa semua file ke app-main (20); jangan tumpuk dengan zip S2896 sebelumnya.
+
+5) Tanda minus hilang (akar: fmt()/fmtFull() memakai Math.abs). Kini bertanda minus bila negatif:
+ - Beranda > Kekayaan Bersih > "Kas & akun" (dashboard-hub-overview.js: _dhoMoneySigned)
+ - "Saldo sekarang" di kartu Proyeksi Saldo Kas (cashflow-projection-presenter.js) dan Proyeksi Saldo 30 Hari (financial-forecast-presenter.js)
+ - "Saldo akhir proyeksi" di kartu Alokasi Dana Aman (finance-dashboard.js)
+ Pola sama dengan perbaikan S2844 (saldo di kartu Kekayaan Bersih). fmt() sendiri TIDAK diubah (dipakai di ribuan tempat sebagai nilai mutlak).
+6) Label "Utang" tidak seragam: sub kartu Kekayaan Bersih (finance-dashboard.js _netWorthCard) memakai totalDebtValue() (hanya Buku Utang), sedangkan Beranda/rumus Kekayaan Bersih memakai FI.totalDebt() (Buku Utang + sisa cicilan + utang jatuh tempo). Kini kartu memakai FI.totalDebt() (fallback ke totalDebtValue bila FI belum termuat). Angka Kekayaan Bersih tidak berubah; hanya teks "Utang" yang disamakan.
+
+Uji browser (Chromium 390x844, data sintetis; backup keluarga-W tidak ada di arsip) — 22 pemeriksaan LULUS, tanpa error JS:
+ - Penerima manual lewat modal asli: klik "Tambah Penerima", ketik nama baru, porsi W 50% -> auto-isi 50%, "Simpan Bagi Hasil" -> ownerId dari OwnerRegistry, registry +1, simpan ulang tidak dobel, nama kosong / total != 100% ditolak tanpa mengubah data tersimpan.
+ - Pencairan laba lewat modal asli: sebelum laba diakui ditolak; akui 400.000 (porsi W 50% = hak 200.000): cair 200.001 ditolak "Melebihi hak W", ledger tidak bertambah; cair 200.000 diterima; +1 ditolak; kunci ganda idempoten; akui sisa -> hak 400.000, cair 200.000 lagi diterima, +1 ditolak; dialog S2866 (cek melebihi bagian W) tetap aktif; utang penerima manual 200.000 -> 400.000 tertaut ownerId; Laporan tanpa NaN/undefined/[object.
+ - Tanda minus & label Utang (saldo -3.600.000; Buku Utang 777.247; FI.totalDebt 1.739.529): "Kas & akun -Rp 3.600.000", "Saldo -Rp 3.600.000 · Utang Rp 1.739.529". "Saldo sekarang" dan "Saldo akhir proyeksi" diuji di tes unit saja (belum dilihat di browser).
+Tes: tests/s2896-tanda-minus-label-utang.test.js (6 tes; 5 gagal di basis, lulus di patch). Suite penuh: 10.244 tes, 10.243 lulus, 0 gagal (1 skip lama). verify-bundle-freshness OK; FILE-HASHES-SHA256.txt disinkronkan (s256au lulus).
+Belum diuji: Android/Safari/Firefox, Service Worker aktif, Drive/Sheets, backup keluarga-W asli (pencairan dengan nilai riil W 800.000 / home in 1.588.100).
+
+7) Area sentuh tombol peringatan harga Kasir (Kasir.openPriceReko, ⬇️/⬆️) 22x22 -> 44x44 px (modern-ui-layer.css; styles.css TIDAK diubah karena tepat di batas anggaran 180.000 byte). Lingkaran visual tetap 22 px (digambar ::before); tangkapan layar sebelum/sesudah identik piksel demi piksel. Varian daftar (inline) min 44x44. Terukur di Chromium; bukan diuji pada tile Kasir sungguhan (butuh data estimasi Etalase).
+8) Uji dengan backup keluarga-W asli (20 Nov), proyek wallpanel (dana klien, RAB 7.000.000, laba maks 2.692.582): 16 pemeriksaan LULUS. Hak W 451.000 saat laba diakui 1.346.291 dan 800.000 saat penuh; cair hak+1 ditolak; utang home in 1.588.100 muncul saat laba diakui penuh; saldo pribadi & Kekayaan Bersih naik tepat sebesar pencairan W (800.000), total utang tetap 1.739.529; penerima manual tersimpan dgn ownerId registry (+1), utang bagi hasil home in + penerima manual terbentuk, tanpa NaN/scroll horizontal/error JS.
+
+
+9) Dana Titipan: hak bagi hasil proyek yang belum dibayar kini tampil di kalimat status kartu pemilik (tanpa membuka "Detail lengkap"), mis. "Pokok belum dicatat · Bagi hasil proyek belum dibayar Rp 1,59 jt" (dana-titipan-portfolio-render.js: _ownerStatusSentence membungkus _ownerStatusSentenceBase). Tanpa bagi hasil kalimat PERSIS seperti semula. Baris "Bagi Hasil Proyek (belum dibayar)" di Detail lengkap dipertahankan (angka penuh + tautan ke Buku Utang). Murni tampilan: tidak masuk usedTotal/estimasi/available.
+ Uji: tests/s2896-titipan-bagi-hasil-status.test.js (3 tes; 2 gagal di basis). Browser dgn backup keluarga-W asli: sebelum laba diakui tidak ada teks; setelah laba diakui penuh kartu home in menampilkan "Bagi hasil proyek belum dibayar Rp 1,59 jt", pemilik lain (renov, mas sihab) tidak berubah, teks tidak terpotong, tanpa scroll horizontal/NaN/error JS.
+Build akhir: 2909.
+Suite penuh build 2909: 10.247 tes, 10.246 lulus, 0 gagal (1 skip lama). verify-bundle-freshness OK; hash disinkronkan.
+
+=== LANJUTAN (akumulasi) — nomor 3: e2e permanen backup asli — build tetap 2909 (kode aplikasi TIDAK berubah) ===
+10) Skrip uji backup asli dijadikan tes e2e permanen (opt-in, bukan bagian `npm test`):
+ - e2e/s2896-backup-asli.js  | jalankan: BACKUP=/path/backup-keluarga-W.json npm run test:e2e:backup  (E2E_SKIP_OK=1 -> exit 0 bila BACKUP/browser tidak ada; E2E_SHOTS=/dir; E2E_PROJECT=<id>)
+ - 33 pemeriksaan INVARIAN dari isi backup (bukan angka tetap): paritas dana klien (isAliranKlien = biaya status dana; tidak ada biaya klien di akun titipan), hak W & guard pencairan (hak+1 ditolak, kunci ganda idempoten), utang bagi hasil penerima + kartu Dana Titipan (sebelum/sesudah laba diakui, kartu pemilik lain tidak berubah), total utang & Kekayaan Bersih tidak berubah oleh utang bagi hasil, saldo pribadi naik tepat sebesar pencairan, penerima manual lewat modal asli (OwnerRegistry +1, nama sama tanpa ID ganda, simpan ditolak bila nama kosong/total != 100%), tanda minus saldo negatif di Beranda, tanpa NaN/scroll horizontal/error JS.
+ - Angka emas (biaya 4.307.418, laba maks 2.692.582, hak W 800.000, utang home in 1.588.100) hanya dicek bila SHA-256 backup = backup 20 Nov 2026.
+ - Data pribadi TIDAK ikut repo: skrip hanya membaca path env, tidak menulis file (dijaga tests/s2896-e2e-backup-asli-kontrak.test.js: skrip ada, terdaftar di package.json, exit 3 tanpa BACKUP / 0 dengan E2E_SKIP_OK=1, tanpa tulis file).
+ - e2e/dana-proyek-browser/harness.js: Playwright dicari lewat require('playwright') dulu, baru /opt/npm-tools (sebelumnya path tetap).
+ - Hasil: build patch = 33/33 lulus; basis app-main (20) tanpa patch = 13 gagal (A1, C3, D2-D5, E1-E4, F1-F3) -> tes memang mendeteksi regresi. Suite penuh: 10.250 tes, 0 gagal (1 skip lama).
+ - Catatan terap: build/apply-delete-manifest menghapus modules/modals.js & modules/shop/modals.js (yatim); tanpa itu 2 tes guard lama gagal.
+
+=== LANJUTAN (akumulasi) — audit poin 4 & 2 (audit saja; kode aplikasi TIDAK berubah, build tetap 2909) ===
+11) AUDIT-S2896-SYNC-STARTUP-DAN-SW.md + skrip ulang e2e/audit-s2896/. Temuan: P4-1 utang bagi hasil tidak disinkronkan saat boot/restore; P4-2 rename pemilik tidak menyebar ke bagiHasil.owners (nama utang balik ke nama lama); P4-3 hapus DP setelah laba diakui -> utang tetap sampai koreksi (pencairan tetap diblokir); P2-1 offline: bundle ?v= tidak ketemu di cache SW (gagal boot offline pada instalasi pertama & tepat setelah deploy sampai 1x load online); P2-2 harness e2e lama tidak menjalankan SW.
+
+
+=== LANJUTAN (akumulasi) — S2897: perbaikan 4 temuan audit poin 4 & 2 — build 2910 (kw-cache-v2910) ===
+Basis tetap app-main (20). Patch KUMULATIF (menggantikan PATCH-S2896-lanjutan-audit.zip). Timpa semua file ke app-main (20).
+12) sw.js (P2-1): precache + 5 skrip yang dimuat index.html tapi belum terdaftar; cadangan ignoreSearch untuk request ber-?v= (offline).
+13) renovasi.js + app-init-runtime.js + akun.js (P4-1): renovSyncBagiHasilUtangSemua() dipanggil setelah mesin klien siap (boot/restore/muat lambat).
+14) owner-registry.js (P4-2): rename()/merge() menyebar ke bagiHasil.owners (+renovBagiOwnerId); merge batal bila konflik penerima ganda.
+15) dana-titipan-aggregation-api.js + dana-titipan-portfolio-render.js (P4-3): penanda "menunggu koreksi laba".
+Tes baru: tests/s2897-bagi-hasil-startup-rename-koreksi-sw.test.js (10). e2e/audit-s2896/bagi-hasil-hapus-dp.js diperluas (cek kartu).
+16) sw.js tambahan: precache tahan satu URL gagal (addAll -> isi satu per satu); activate tidak menghapus cache lama bila cache baru kosong. package.json: npm run test:e2e:sw (uji SW sungguhan, butuh Playwright). Tes +1.
+17) e2e/s2897-konsistensi-pemilik.js + npm run test:e2e:pemilik (BACKUP=...): pemeriksa baca-saja konsistensi nama/ID pemilik (aset, holding, komitmen, utang, bagi hasil, nama ganda registry); tipe SELF/FAMILY dst. diabaikan. Tes kontrak +2. Backup 20 Nov: OK.

@@ -139,7 +139,7 @@ const OwnerRegistry = {
     if (!trimmed) return { ok: false, reason: 'Nama baru wajib diisi' };
     const snapshot = _ownerRegistrySnapshot();
     entry.name = trimmed;
-    let assets = 0, investments = 0, commitments = 0, debts = 0;
+    let assets = 0, investments = 0, commitments = 0, debts = 0, bagiHasil = 0;
     (Array.isArray(D.assets) ? D.assets : []).forEach((a) => {
       (Array.isArray(a && a.owners) ? a.owners : []).forEach((o) => {
         if (o && !o.isSelf && String(o.ownerId) === String(id)) { o.ownerName = trimmed; assets++; }
@@ -160,9 +160,17 @@ const OwnerRegistry = {
     (Array.isArray(D.debts) ? D.debts : []).forEach((d) => {
       if (d && String(d.linkedOwnerId) === String(id)) { if(BillDebtPiutangCanonicalWriter&&typeof BillDebtPiutangCanonicalWriter.updateById==='function') BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.name = trimmed; }); else d.name=trimmed; debts++; }
     });
+    // S2897: bagi hasil proyek renovasi menyimpan salinan ownerName sendiri
+    // (D.renovProjects[].bagiHasil.owners[]). Tanpa propagasi, sinkron utang
+    // bagi hasil berikutnya mengembalikan nama utang ke nama lama.
+    (Array.isArray(D.renovProjects) ? D.renovProjects : []).forEach((p) => {
+      (Array.isArray(p && p.bagiHasil && p.bagiHasil.owners) ? p.bagiHasil.owners : []).forEach((o) => {
+        if (o && !o.isSelf && String(o.ownerId) === String(id)) { o.ownerName = trimmed; bagiHasil++; }
+      });
+    });
     const persisted = _ownerRegistrySaveOrRollback(snapshot);
     if(!persisted.ok)return {ok:false,reason:'persistence-failed'};
-    return { ok: true, assets, investments, commitments, debts };
+    return { ok: true, assets, investments, commitments, debts, bagiHasil };
   },
 
   // merge(sourceId, targetId) — R4: gabung 2 entri registry yang ternyata
@@ -199,8 +207,13 @@ const OwnerRegistry = {
       const ids = (Array.isArray(h && h.owners) ? h.owners : []).filter((o) => o && !o.isSelf).map((o) => String(o.ownerId));
       if (ids.includes(String(sourceId)) && ids.includes(String(targetId))) conflicts.push({ domain: 'investment', id: h.id });
     });
+    // S2897: penerima bagi hasil ganda dalam satu proyek (source DAN target) tidak digabung otomatis.
+    (Array.isArray(D.renovProjects) ? D.renovProjects : []).forEach((p) => {
+      const ids = (Array.isArray(p && p.bagiHasil && p.bagiHasil.owners) ? p.bagiHasil.owners : []).filter((o) => o && !o.isSelf).map((o) => String(o.ownerId));
+      if (ids.includes(String(sourceId)) && ids.includes(String(targetId))) conflicts.push({ domain: 'renovBagiHasil', id: p.id });
+    });
     if (conflicts.length) return { ok: false, reason: 'conflict', conflicts };
-    let assets = 0, investments = 0, commitments = 0, debts = 0;
+    let assets = 0, investments = 0, commitments = 0, debts = 0, bagiHasil = 0;
     (Array.isArray(D.assets) ? D.assets : []).forEach((a) => {
       (Array.isArray(a && a.owners) ? a.owners : []).forEach((o) => {
         if (o && !o.isSelf && String(o.ownerId) === String(sourceId)) { o.ownerId = targetId; o.ownerName = tgt.name; assets++; }
@@ -215,12 +228,17 @@ const OwnerRegistry = {
       if (c && String(c.ownerId) === String(sourceId)) { c.ownerId = targetId; c.ownerName = tgt.name; commitments++; }
     });
     (Array.isArray(D.debts) ? D.debts : []).forEach((d) => {
-      if (d && String(d.linkedOwnerId) === String(sourceId)) { if(BillDebtPiutangCanonicalWriter&&typeof BillDebtPiutangCanonicalWriter.updateById==='function') BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.linkedOwnerId = targetId; d0.name = tgt.name; }); else { d.linkedOwnerId=targetId; d.name=tgt.name; } debts++; }
+      if (d && String(d.linkedOwnerId) === String(sourceId)) { if(BillDebtPiutangCanonicalWriter&&typeof BillDebtPiutangCanonicalWriter.updateById==='function') BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.linkedOwnerId = targetId; d0.name = tgt.name; if (String(d0.renovBagiOwnerId) === String(sourceId)) d0.renovBagiOwnerId = targetId; }); else { d.linkedOwnerId=targetId; d.name=tgt.name; if (String(d.renovBagiOwnerId) === String(sourceId)) d.renovBagiOwnerId = targetId; } debts++; }
+    });
+    (Array.isArray(D.renovProjects) ? D.renovProjects : []).forEach((p) => {
+      (Array.isArray(p && p.bagiHasil && p.bagiHasil.owners) ? p.bagiHasil.owners : []).forEach((o) => {
+        if (o && !o.isSelf && String(o.ownerId) === String(sourceId)) { o.ownerId = targetId; o.ownerName = tgt.name; bagiHasil++; }
+      });
     });
     D.ownerRegistry = D.ownerRegistry.filter((o) => String(o.id) !== String(sourceId));
     const persisted = _ownerRegistrySaveOrRollback(snapshot);
     if(!persisted.ok)return {ok:false,reason:'persistence-failed'};
-    return { ok: true, assets, investments, commitments, debts };
+    return { ok: true, assets, investments, commitments, debts, bagiHasil };
   },
 
 };

@@ -155,7 +155,7 @@ const CashFlowProjectionPresenter = {
       label: 'Proyeksi Saldo Kas',
       value: (projected < 0 ? '-' : '') + money(Math.abs(projected)),
       cls: projected < 0 ? 'red' : 'green',
-      sub: `Saldo sekarang ${money(f.saldoNow)} · ${f.upcomingCount} tagihan jatuh tempo (${money(f.billsDue)})`,
+      sub: `Saldo sekarang ${(f.saldoNow < 0 ? '-' : '') + money(Math.abs(f.saldoNow))} · ${f.upcomingCount} tagihan jatuh tempo (${money(f.billsDue)})`,
       onClick,
     };
   },

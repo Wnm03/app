@@ -40,7 +40,7 @@ if(typeof window!=='undefined'&&window.__kwPersistenceRecoveryRequired===true){
 // Dana proyek klien: mulai muat mesinnya (renovasi.js, lazy) SEDINI MUNGKIN supaya halaman pertama langsung memakai angka PRIBADI,
 // bukan angka fisik sekilas. Tanpa proyek klien: tidak memuat apa pun. Dengan PIN: dimuat di belakang layar PIN (tidak ditunggu).
 let __kwMesinKlien=null;
-try{__kwMesinKlien=(typeof siapkanMesinKlienSafe==='function')?siapkanMesinKlienSafe(1500):null;if(__kwMesinKlien&&typeof __kwMesinKlien.catch==='function')__kwMesinKlien.catch(function(e){void e;});}catch(e){console.warn('[KlienEngine] pemuatan awal gagal:',e);}
+try{__kwMesinKlien=(typeof siapkanMesinKlienSafe==='function')?siapkanMesinKlienSafe(1500):null;if(__kwMesinKlien&&typeof __kwMesinKlien.catch==='function')__kwMesinKlien.catch(function(e){void e;});/* S2897: selaraskan utang bagi hasil setelah mesin siap (boot & restore); idempoten, no-op tanpa proyek klien */if(__kwMesinKlien&&typeof __kwMesinKlien.then==='function')__kwMesinKlien.then(function(ok){if(ok===true&&typeof renovSyncBagiHasilUtangSemua==='function')renovSyncBagiHasilUtangSemua();}).catch(function(e){void e;});}catch(e){console.warn('[KlienEngine] pemuatan awal gagal:',e);}
 if(typeof AIService!=='undefined'&&typeof AIService.wireEvents==='function'){
 try{AIService.wireEvents();}catch(e){console.warn('[AIService] wireEvents gagal:',e);}
 }

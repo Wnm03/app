@@ -50,8 +50,9 @@ test('kalibrasi cash-projection: realisasi memasukkan pencairan bulan itu',()=>{
  const c=loadSource(['modules/business/reset-gaji-mingguan.js','modules/finance/tagihan-kalender.js','modules/finance/cash-projection.js'],{D:f.D,totalSaldoAkun:()=>1000,saldoPribadiSafe:f.r.saldoPribadi,isAliranKlienSafe:f.r.isAliranKlien,pencairanKlienBulanSafe:x.pencairanKlienBulanSafe});
  f.D.cashProjSnapshots.push({month:MONTH,year:YEAR,proyeksiKas:100,proyeksiSaldoAkhirBulan:0,saldoKasSekarang:0,recordedAt:'x'});
  const k=c.getCashProjectionCalibration(MONTH,YEAR);
- // income pribadi 300 (gaji) + 80 (pencairan) - expense 120 = 260
- assert.equal(k.realisasiKas,260);
+ // S2896: biaya 120 dibayar dari rekening tempat DP masuk (sumberDana kosong) = dana proyek, bukan pengeluaran pribadi (sudah mengurangi laba).
+ // income pribadi 300 (gaji) + 80 (pencairan) = 380 (sebelum S2896: 260, biaya proyek terhitung dobel).
+ assert.equal(k.realisasiKas,380);
 });
 function forecast(f,opts){
  const x=ctxFor(f);
