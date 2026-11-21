@@ -876,6 +876,34 @@ return _head+`<div${_isG?` data-dh-grp="${_g}"${_open?'':' hidden'}`:''} style="
     </div>${_capOn&&_n===DH_GROUP_CAP?`<div data-dh-note="${_g}" data-dh-grp="${_g}"${_open?'':' hidden'} class="u-fs12 u-t2" style="margin:0 0 8px;padding:6px 10px">Menampilkan ${DH_GROUP_CAP} dari ${_cnt[i.title]} temuan jenis ini. Perbaiki yang tampil lalu pindai ulang untuk melihat sisanya.</div>`:''}`;}).join('');
 }
 }
+// S2916 — gerbang hak pemilik lintas fitur (baca-saja): kartu Dana Titipan, Buku Utang "Dana titipan akun" dan pencairan laba proyek harus saling cocok.
+try{
+if(typeof DanaTitipanPortfolioAPI!=='undefined'&&typeof DanaTitipanPortfolioAPI.build==='function'){
+const _tp=DanaTitipanPortfolioAPI.build();
+(_tp&&_tp.owners||[]).forEach(o=>{
+if(o.akunTitipanLive&&Math.abs((o.akunTitipanTotal||0)-(o.akunTitipanDebtTotal||0))>1){
+issues.push({level:'warn',title:'Dana titipan akun belum sinkron dengan Buku Utang',detail:`${escapeHtml(o.ownerName||'Pemilik')}: saldo rekening titipan x porsi = ${fmtFull(o.akunTitipanTotal||0)}, tetapi baris Buku Utang "Dana titipan akun" ${fmtFull(o.akunTitipanDebtTotal||0)}. Kartu Dana Titipan memakai saldo rekening (angka terbaru); baris utang menyusul saat data disimpan berikutnya.`});
+}
+});
+}
+(D.renovProjects||[]).forEach(p=>{
+const f=p&&p.pencairanFinal;if(!f||!Array.isArray(f.rows))return;
+f.rows.forEach(r=>{
+if(!r||r.isSelf||r.tahan||!(Number(r.jumlah)>0))return;
+const open=(D.debts||[]).filter(d=>d&&!d.lunas&&d.renovBagiProjectId!=null&&String(d.renovBagiProjectId)===String(p.id)&&String(d.renovBagiOwnerId)===String(r.ownerId)&&(Number(d.nilai)||0)>0);
+if(open.length)issues.push({level:'warn',title:'Hak bagi hasil berpotensi tercatat ganda',detail:`Proyek "${escapeHtml(p.name||p.id)}": bagian ${escapeHtml(r.ownerName||'pemilik')} sudah dicairkan ke rekeningnya (${fmtFull(r.jumlah)}) tetapi utang bagi hasil masih terbuka (${fmtFull(open.reduce((a,d)=>a+(Number(d.nilai)||0),0))}). Hak pemilik itu terhitung dua kali di Dana Titipan.`});
+});
+});
+// S2917 — referensi pemilik lintas fitur (baca-saja): id yatim, nama ganda, nama basi.
+try{
+if(typeof OwnerRegistry!=='undefined'&&typeof OwnerRegistry.auditRefs==='function'){
+const _ar=OwnerRegistry.auditRefs();
+_ar.orphans.forEach(o=>issues.push({level:'warn',title:'Referensi pemilik tidak ada di daftar pemilik',detail:`Id pemilik "${escapeHtml(o.ownerId)}" dipakai di ${escapeHtml(o.kinds.join(', '))} tetapi tidak terdaftar. Cek Pengaturan > Daftar Pemilik sebelum menggabung atau mengganti nama.`}));
+_ar.duplicateNames.forEach(d=>issues.push({level:'warn',title:'Nama pemilik ganda di daftar pemilik',detail:`Nama "${escapeHtml(d.name)}" terdaftar ${d.ids.length} kali. Gabungkan lewat Daftar Pemilik bila orangnya sama.`}));
+_ar.staleNames.forEach(x=>issues.push({level:'warn',title:'Nama pemilik basi di salah satu fitur',detail:`${escapeHtml(x.kind)}: tertulis "${escapeHtml(x.rowName)}", daftar pemilik "${escapeHtml(x.registryName)}". Ubah nama sekali lagi lewat Daftar Pemilik untuk menyamakan.`}));
+}
+}catch(_eRef){console.warn('[health] cek referensi pemilik dilewati',_eRef);}
+}catch(_eHak){console.warn('[health] cek hak pemilik dilewati',_eHak);}
 _renderDataHealth(issues);
 openModal('dataHealthModal');
 return issues;

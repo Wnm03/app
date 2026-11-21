@@ -136,7 +136,11 @@ const OwnerRegistrySettingsUI = {
     if (!res.ok) {
       if (res.reason === 'conflict') {
         const n = (res.conflicts || []).length;
-        const msg = 'Gagal digabung: ' + n + ' Aset/Investasi sudah punya baris "' + src.name + '" DAN "' + target.name + '" sekaligus di daftar pemilik yang sama. Gabung dibatalkan total (0 perubahan) supaya kedua porsi tidak ke-collapse diam-diam — review manual dulu Aset/Investasi tsb sebelum coba gabung lagi.';
+        const _doms = new Set((res.conflicts || []).map((c) => c && c.domain));
+        const _onlyAI = [..._doms].every((d) => d === 'asset' || d === 'investment');
+        const msg = _onlyAI
+          ? 'Gagal digabung: ' + n + ' Aset/Investasi sudah punya baris "' + src.name + '" DAN "' + target.name + '" sekaligus di daftar pemilik yang sama. Gabung dibatalkan total (0 perubahan) supaya kedua porsi tidak ke-collapse diam-diam — review manual dulu Aset/Investasi tsb sebelum coba gabung lagi.'
+          : 'Gagal digabung: ' + n + ' data (Aset/Investasi/Rekening/Pencairan laba/Komitmen Titipan) sudah memuat "' + src.name + '" DAN "' + target.name + '" sekaligus. Gabung dibatalkan total (0 perubahan) supaya kedua porsi tidak ke-collapse diam-diam — review manual dulu data tsb sebelum coba gabung lagi.';
         if (typeof showAlertModal === 'function') await showAlertModal(msg, { title: '⚠️ Konflik Porsi' });
         else if (typeof toast === 'function') toast('⚠️ ' + msg);
       } else if (typeof toast === 'function') {

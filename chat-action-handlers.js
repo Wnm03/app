@@ -3,7 +3,7 @@
 // Isi: MODULE_FEATURES_VERSION (konstanta versi, dicek sinkron oleh diagnostik-versi.js) + CHAT_ACTION_LABELS (label tombol usul per tipe aksi) + CHAT_ACTION_HANDLERS (eksekusi nyata tiap tipe aksi ke D.*, dipanggil dari chat-action.js via chatActionInnerHTML/extractChatAction) + CHAT_ACTION_EDIT_FIELDS (skema field utk form edit usulan sebelum dieksekusi).
 // PENTING: dimuat di GROUP_A build.js, tepat di posisi lama features-budget-laporan-carnotes-pelanggan.js (setelah car-notes.js, sebelum edukasi-dana.js) — urutan load antar file GROUP_A jangan diubah sembarangan.
 
-const MODULE_FEATURES_VERSION='s2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2918';
+const MODULE_FEATURES_VERSION='s2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2923';
 // S2853 — helper resolusi nama -> id untuk aksi chat. Nama yang DISEBUT tapi tidak dikenali/ambigu = error (bukan diam-diam jatuh ke akun pertama).
 function _chatResolveAccountId(name){
 const n=String(name||'').trim().toLowerCase();

@@ -304,16 +304,105 @@ deleteReturn(id) {
   const idx = D.titipanReturns.findIndex((r) => r && String(r.id) === String(id));
   if (idx === -1) return false;
   const beforeReturns = D.titipanReturns.slice();
+  const rec = D.titipanReturns[idx];
+  // S2917: pengembalian dengan transfer/pengeluaran tertaut -> transaksinya ikut dibatalkan (atomik).
+  const linked = Array.isArray(rec && rec.txIds) ? rec.txIds.map(String) : [];
+  const beforeTx = linked.length && Array.isArray(D.transactions) ? D.transactions.slice() : null;
   D.titipanReturns.splice(idx, 1);
+  if (linked.length) {
+    if (typeof FinanceTxSOT !== 'undefined' && FinanceTxSOT && typeof FinanceTxSOT.removeWhere === 'function') FinanceTxSOT.removeWhere((t) => t && linked.includes(String(t.id)));
+    if (typeof invalidateAccBalCache === 'function') invalidateAccBalCache();
+  }
   if (typeof save === 'function') {
     const persisted = save();
     if (persisted === false) {
       D.titipanReturns = beforeReturns;
+      if (beforeTx && typeof FinanceTxSOT !== 'undefined' && FinanceTxSOT && typeof FinanceTxSOT.replaceSnapshot === 'function') { FinanceTxSOT.replaceSnapshot(beforeTx); if (typeof invalidateAccBalCache === 'function') invalidateAccBalCache(); }
       return {ok:false, code:'PERSISTENCE_FAILED'};
     }
   }
   if (typeof AIBus !== 'undefined') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'return', action: 'delete', returnId: id });
   return true;
+},
+
+// S2917: recordReturnWithTransfer(input) — catat pengembalian + pindahan uangnya SEKALIGUS, atomik.
+//   input: {ownerId, amount(>0), returnDate, notes, sourceAccountId, mode:'rekening'|'keluar', destAccountId, izinkanMinus}
+//   sourceAccountId = rekening titipan yang memuat porsi pemilik itu (non-SELF).
+//   mode 'rekening': transfer_out/transfer_in ke rekening LAIN yang 100% milik pemilik itu. Rekening milik sendiri DITOLAK
+//     (akan menaikkan saldo pribadi dengan uang orang lain).
+//   mode 'keluar': pengeluaran kategori "Dana Titipan" dari rekening sumber (uang diserahkan di luar aplikasi).
+//   Gagal simpan/validasi -> tidak ada perubahan (catatan dan transaksi di-rollback).
+// Return: record (sama bentuk recordReturn + txIds, mode, sourceAccountId, destAccountId) atau {ok:false, reason, minus?}.
+recordReturnWithTransfer(input) {
+  if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return {ok:false,code:'STALE_CROSS_TAB',reason:'Data berubah di tab lain'};
+  const p = input || {};
+  const ownerId = p.ownerId;
+  if (!ownerId) return {ok:false,reason:'Owner wajib dipilih'};
+  const known = this.listExistingOwners().find((o) => o.ownerId === ownerId);
+  if (!known) return {ok:false,reason:'Owner tidak ditemukan pada daftar pemilik yang ada'};
+  const amount = Math.round(Number(p.amount));
+  if (!isFinite(amount) || amount <= 0) return {ok:false,reason:'Nominal harus lebih dari 0'};
+  const mode = p.mode === 'keluar' ? 'keluar' : (p.mode === 'rekening' ? 'rekening' : null);
+  if (!mode) return {ok:false,reason:'Tujuan uang wajib dipilih'};
+  const accs = Array.isArray(D.accounts) ? D.accounts : [];
+  const same = (a, b) => String(a) === String(b);
+  const src = accs.find((a) => a && same(a.id, p.sourceAccountId));
+  const ownsPortion = (a) => Array.isArray(a && a.owners) && a.owners.some((o) => o && !o.isSelf && same(o.ownerId, ownerId));
+  if (!src || !ownsPortion(src)) return {ok:false,reason:'Rekening sumber harus memuat porsi pemilik ini'};
+  let dest = null;
+  if (mode === 'rekening') {
+    dest = accs.find((a) => a && same(a.id, p.destAccountId));
+    if (!dest) return {ok:false,reason:'Rekening tujuan wajib dipilih'};
+    if (same(dest.id, src.id)) return {ok:false,reason:'Rekening tujuan harus berbeda dari rekening sumber'};
+    const onlyOwner = Array.isArray(dest.owners) && dest.owners.length > 0 && dest.owners.every((o) => o && !o.isSelf && same(o.ownerId, ownerId));
+    if (!onlyOwner) return {ok:false,reason:'Rekening tujuan harus milik pemilik ini sepenuhnya (rekening milik sendiri tidak boleh jadi tujuan)'};
+  }
+  const porsi = (src.owners.find((o) => o && !o.isSelf && same(o.ownerId, ownerId)) || {}).porsi;
+  if (!p.izinkanMinus && typeof recalcAccBalance === 'function') {
+    const saldo = Number(recalcAccBalance(src.id));
+    const hak = Number.isFinite(saldo) ? saldo * (Number(porsi) || 0) / 100 : NaN;
+    if (Number.isFinite(hak) && amount > hak + 0.5) return {ok:false,minus:true,keluar:amount,saldo:Math.round(hak),reason:'Nominal melebihi hak pemilik di rekening sumber (' + Math.round(hak) + ')'};
+  }
+  const hasSOT = typeof FinanceTxSOT !== 'undefined' && FinanceTxSOT && typeof FinanceTxSOT.createMany === 'function';
+  if (!hasSOT) return {ok:false,reason:'Penyimpan transaksi belum siap'};
+  const tgl = p.returnDate || (typeof todayStr === 'function' ? todayStr() : new Date().toISOString().slice(0, 10));
+  const ownerName = known.ownerName;
+  const beforeReturns = JSON.stringify(Array.isArray(D.titipanReturns) ? D.titipanReturns : []);
+  const recId = (typeof uid === 'function') ? uid() : ('tr_' + Date.now());
+  const note = 'Pengembalian dana titipan - ' + ownerName + (p.notes ? ' (' + p.notes + ')' : '');
+  const tag = { titipanReturnId: recId, deductionOwnerId: ownerId, titipanLinkId: ownerId };
+  let txs;
+  if (mode === 'rekening') {
+    const pid = (typeof uid === 'function') ? uid() : ('pair_' + Date.now());
+    txs = [
+      { id: (typeof uid === 'function') ? uid() : (recId + 'o'), type: 'transfer_out', amount, category: 'Transfer', note, date: tgl, accountId: src.id, transferPairId: pid, ...tag },
+      { id: (typeof uid === 'function') ? uid() : (recId + 'i'), type: 'transfer_in', amount, category: 'Transfer', note, date: tgl, accountId: dest.id, transferPairId: pid, titipanReturnId: recId },
+    ];
+  } else {
+    if (typeof FinanceCategorySOT !== 'undefined' && FinanceCategorySOT && typeof FinanceCategorySOT.ensureCategory === 'function') {
+      FinanceCategorySOT.ensureCategory('expense', { name: 'Dana Titipan', emoji: '📦', classification: 'NON_BELANJA' });
+    }
+    txs = [{ id: (typeof uid === 'function') ? uid() : (recId + 'x'), type: 'expense', amount, category: 'Dana Titipan', subcategory: '', accountId: src.id, payMethod: 'tunai', note, date: tgl, ...tag }];
+  }
+  const ids = txs.map((t) => t.id);
+  const undo = () => {
+    D.titipanReturns = JSON.parse(beforeReturns);
+    FinanceTxSOT.removeWhere((t) => t && ids.includes(t.id));
+    if (typeof invalidateAccBalCache === 'function') invalidateAccBalCache();
+  };
+  try {
+    FinanceTxSOT.createMany(txs);
+    D.titipanReturns = D.titipanReturns || [];
+    const record = { id: recId, ownerId, ownerName, amount, returnDate: p.returnDate || tgl, notes: p.notes || '', createdAt: Date.now(), mode, sourceAccountId: src.id, destAccountId: dest ? dest.id : '', txIds: ids };
+    D.titipanReturns.push(record);
+    if (typeof invalidateAccBalCache === 'function') invalidateAccBalCache();
+    if (typeof save === 'function' && save() === false) { undo(); return {ok:false,code:'PERSISTENCE_FAILED',reason:'Penyimpanan gagal'}; }
+    if (typeof AIBus !== 'undefined') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'return', action: 'create', returnId: record.id, ownerId });
+    return record;
+  } catch (e) {
+    undo();
+    return {ok:false,reason:'Gagal: ' + ((e && e.message) || 'kesalahan')};
+  }
 },
 
 });

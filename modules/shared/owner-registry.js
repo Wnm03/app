@@ -33,23 +33,44 @@ var BillDebtPiutangCanonicalWriter=(typeof globalThis!=='undefined'&&globalThis.
 function _ownerRegistryClone(value){
   try{return JSON.parse(JSON.stringify(value));}catch(_){return value;}
 }
+// S2917: daftar koleksi lintas fitur yang ikut di-snapshot/rollback selain registry.
+const _OWNER_REF_KEYS=['assets','investments','titipanCommitments','accounts','titipanReturns','transactions','bills','billsArchive','piutang','renovProjects'];
 function _ownerRegistrySnapshot(){
   if(typeof D==='undefined')return null;
-  return {
-    ownerRegistry:_ownerRegistryClone(D.ownerRegistry),
-    assets:_ownerRegistryClone(D.assets),
-    investments:_ownerRegistryClone(D.investments),
-    titipanCommitments:_ownerRegistryClone(D.titipanCommitments),
-    debts:_ownerRegistryClone(D.debts),
-  };
+  const snap={ownerRegistry:_ownerRegistryClone(D.ownerRegistry),debts:_ownerRegistryClone(D.debts)};
+  _OWNER_REF_KEYS.forEach((k)=>{snap[k]=_ownerRegistryClone(D[k]);});
+  return snap;
 }
 function _ownerRegistryRestore(snapshot){
   if(!snapshot||typeof D==='undefined')return;
   D.ownerRegistry=snapshot.ownerRegistry;
-  D.assets=snapshot.assets;
-  D.investments=snapshot.investments;
-  D.titipanCommitments=snapshot.titipanCommitments;
+  _OWNER_REF_KEYS.forEach((k)=>{if(snapshot[k]!==undefined)D[k]=snapshot[k];else delete D[k];});
   if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter||typeof BillDebtPiutangCanonicalWriter.replace!=='function') throw new Error('BILL_DEBT_CANONICAL_WRITER_REQUIRED'); BillDebtPiutangCanonicalWriter.replace('debts',snapshot.debts);
+}
+// S2917: SATU peta tempat penyimpan id pemilik lintas fitur. Dipakai rename(), merge(),
+// auditRefs() dan countRefs() supaya tidak ada tempat yang terlupa. Callback menerima
+// (holder, field, nameField|null, kind, scope). `holder[field]` = id pemilik; scope = objek
+// pembungkus (rekening/proyek) untuk deteksi konflik. Baris isSelf / id 'SELF' tidak dikunjungi.
+function _ownerRefVisit(fn){
+  if(typeof D==='undefined'||!D)return;
+  const arr=(v)=>Array.isArray(v)?v:[];
+  const has=(v)=>v!=null&&v!==''&&String(v)!=='SELF';
+  arr(D.accounts).forEach((a)=>{
+    if(!a)return;
+    arr(a.owners).forEach((o)=>{if(o&&!o.isSelf&&has(o.ownerId))fn(o,'ownerId','ownerName','accountOwner',a);});
+    if(a.ownerAnchor&&Array.isArray(a.ownerAnchor.ids))a.ownerAnchor.ids.forEach((v,i)=>{if(has(v))fn(a.ownerAnchor.ids,i,null,'ownerAnchor',a);});
+  });
+  arr(D.titipanReturns).forEach((r)=>{if(r&&has(r.ownerId))fn(r,'ownerId','ownerName','titipanReturn',null);});
+  arr(D.transactions).forEach((t)=>{
+    if(!t)return;
+    ['deductionOwnerId','titipanLinkId','renovLabaOwnerId','talanganPelunasanOwnerId'].forEach((f)=>{if(has(t[f]))fn(t,f,null,'tx.'+f,null);});
+  });
+  arr(D.bills).concat(arr(D.billsArchive)).forEach((b)=>{if(b&&has(b.deductionOwnerId))fn(b,'deductionOwnerId',null,'bill.deductionOwnerId',null);});
+  arr(D.piutang).forEach((p)=>{if(p&&has(p.autoTitipanOwnerId))fn(p,'autoTitipanOwnerId',null,'piutang.autoTitipanOwnerId',null);});
+  arr(D.renovProjects).forEach((p)=>{
+    const f=p&&p.pencairanFinal;
+    arr(f&&f.rows).forEach((r)=>{if(r&&!r.isSelf&&has(r.ownerId))fn(r,'ownerId','ownerName','pencairanFinal',p);});
+  });
 }
 function _ownerRegistrySaveOrRollback(snapshot){
   try{
@@ -168,9 +189,14 @@ const OwnerRegistry = {
         if (o && !o.isSelf && String(o.ownerId) === String(id)) { o.ownerName = trimmed; bagiHasil++; }
       });
     });
+    // S2917: akun, riwayat pengembalian titipan dan baris pencairan final menyimpan salinan nama sendiri.
+    let lintas = 0;
+    _ownerRefVisit((h, f, nf, kind) => {
+      if (nf && String(h[f]) === String(id) && h[nf] !== trimmed) { h[nf] = trimmed; lintas++; }
+    });
     const persisted = _ownerRegistrySaveOrRollback(snapshot);
     if(!persisted.ok)return {ok:false,reason:'persistence-failed'};
-    return { ok: true, assets, investments, commitments, debts, bagiHasil };
+    return { ok: true, assets, investments, commitments, debts, bagiHasil, lintas };
   },
 
   // merge(sourceId, targetId) — R4: gabung 2 entri registry yang ternyata
@@ -212,6 +238,19 @@ const OwnerRegistry = {
       const ids = (Array.isArray(p && p.bagiHasil && p.bagiHasil.owners) ? p.bagiHasil.owners : []).filter((o) => o && !o.isSelf).map((o) => String(o.ownerId));
       if (ids.includes(String(sourceId)) && ids.includes(String(targetId))) conflicts.push({ domain: 'renovBagiHasil', id: p.id });
     });
+    // S2917: rekening, pencairan final dan komitmen titipan yang memuat pemilik asal DAN tujuan sekaligus.
+    const _sid = String(sourceId), _tid = String(targetId);
+    const _byScope = new Map();
+    _ownerRefVisit((h, f, nf, kind, scope) => {
+      if (!scope || (kind !== 'accountOwner' && kind !== 'pencairanFinal')) return;
+      const v = String(h[f]); if (v !== _sid && v !== _tid) return;
+      const key = kind + ':' + String(scope.id);
+      if (!_byScope.has(key)) _byScope.set(key, { kind, id: scope.id, ids: new Set() });
+      _byScope.get(key).ids.add(v);
+    });
+    _byScope.forEach((e) => { if (e.ids.size > 1) conflicts.push({ domain: e.kind === 'accountOwner' ? 'account' : 'pencairanFinal', id: e.id }); });
+    const _cm = (Array.isArray(D.titipanCommitments) ? D.titipanCommitments : []).filter((c) => c && (String(c.ownerId) === _sid || String(c.ownerId) === _tid));
+    if (_cm.some((c) => String(c.ownerId) === _sid) && _cm.some((c) => String(c.ownerId) === _tid)) conflicts.push({ domain: 'titipanCommitment', id: _tid });
     if (conflicts.length) return { ok: false, reason: 'conflict', conflicts };
     let assets = 0, investments = 0, commitments = 0, debts = 0, bagiHasil = 0;
     (Array.isArray(D.assets) ? D.assets : []).forEach((a) => {
@@ -235,10 +274,54 @@ const OwnerRegistry = {
         if (o && !o.isSelf && String(o.ownerId) === String(sourceId)) { o.ownerId = targetId; o.ownerName = tgt.name; bagiHasil++; }
       });
     });
+    // S2917: pindahkan semua referensi lintas fitur (akun, transaksi, tagihan, piutang talangan, pengembalian, pencairan final).
+    let lintas = 0;
+    _ownerRefVisit((h, f, nf) => {
+      if (String(h[f]) !== _sid) return;
+      h[f] = targetId; if (nf) h[nf] = tgt.name; lintas++;
+    });
     D.ownerRegistry = D.ownerRegistry.filter((o) => String(o.id) !== String(sourceId));
     const persisted = _ownerRegistrySaveOrRollback(snapshot);
     if(!persisted.ok)return {ok:false,reason:'persistence-failed'};
-    return { ok: true, assets, investments, commitments, debts, bagiHasil };
+    return { ok: true, assets, investments, commitments, debts, bagiHasil, lintas };
+  },
+
+  // S2917: countRefs(id) — jumlah referensi id pemilik di semua fitur (baca-saja).
+  countRefs(id) {
+    let n = 0;
+    if (typeof D === 'undefined') return n;
+    _ownerRefVisit((h, f) => { if (String(h[f]) === String(id)) n++; });
+    const cnt = (list, get) => (Array.isArray(list) ? list : []).forEach((x) => { if (x && get(x) && String(get(x)) === String(id)) n++; });
+    cnt(D.titipanCommitments, (c) => c.ownerId);
+    cnt(D.debts, (d) => d.linkedOwnerId);
+    [D.assets, D.investments].forEach((l) => (Array.isArray(l) ? l : []).forEach((e) => (Array.isArray(e && e.owners) ? e.owners : []).forEach((o) => { if (o && !o.isSelf && String(o.ownerId) === String(id)) n++; })));
+    return n;
+  },
+
+  // S2917: auditRefs() — baca-saja. {orphans, duplicateNames, staleNames}. Dipakai gerbang health-check.
+  auditRefs() {
+    const out = { orphans: [], duplicateNames: [], staleNames: [] };
+    if (typeof D === 'undefined') return out;
+    const reg = Array.isArray(D.ownerRegistry) ? D.ownerRegistry : [];
+    const byId = new Map(reg.filter(Boolean).map((o) => [String(o.id), o]));
+    const orphan = new Map(), stale = new Map();
+    const note = (h, f, nf, kind) => {
+      const v = String(h[f]);
+      const e = byId.get(v);
+      if (!e) { if (!orphan.has(v)) orphan.set(v, { ownerId: v, kinds: new Set() }); orphan.get(v).kinds.add(kind); return; }
+      if (nf && typeof h[nf] === 'string' && h[nf].trim() && h[nf].trim() !== String(e.name).trim()) {
+        const k = v + '|' + h[nf]; if (!stale.has(k)) stale.set(k, { ownerId: v, registryName: e.name, rowName: h[nf], kind });
+      }
+    };
+    _ownerRefVisit(note);
+    (Array.isArray(D.titipanCommitments) ? D.titipanCommitments : []).forEach((c) => { if (c && c.ownerId && String(c.ownerId) !== 'SELF') note(c, 'ownerId', 'ownerName', 'titipanCommitment'); });
+    // Hanya pemilik yang tercatat di registry yang dianggap yatim bila id-nya hilang; seed registry kosong (S489) = tidak ada temuan.
+    out.orphans = reg.length ? [...orphan.values()].map((o) => ({ ownerId: o.ownerId, kinds: [...o.kinds] })) : [];
+    out.staleNames = reg.length ? [...stale.values()] : [];
+    const seen = new Map();
+    reg.forEach((o) => { if (!o) return; const k = String(o.name || '').trim().toLowerCase(); if (!k) return; if (!seen.has(k)) seen.set(k, []); seen.get(k).push(String(o.id)); });
+    seen.forEach((ids, k) => { if (ids.length > 1) out.duplicateNames.push({ name: k, ids }); });
+    return out;
   },
 
 };

@@ -381,7 +381,34 @@ const DanaTitipanReturnUI = {
     if (dateEl) dateEl.value = '';
     const notesEl = document.getElementById('titipanReturnNotes');
     if (notesEl) notesEl.value = '';
+    const modeEl = document.getElementById('titipanReturnMode');
+    if (modeEl) modeEl.value = 'riwayat';
+    this._fillAccountSelects(ownerId);
+    this.onModeChange();
     if (typeof openModal === 'function') openModal('titipanReturnModal');
+  },
+
+  // S2917: isi pilihan rekening sumber (rekening yang memuat porsi pemilik) dan tujuan (rekening 100% milik pemilik).
+  _fillAccountSelects(ownerId) {
+    const same = (a, b) => String(a) === String(b);
+    const accs = (typeof D !== 'undefined' && Array.isArray(D.accounts)) ? D.accounts : [];
+    const esc = (v) => (typeof escapeHtml === 'function' ? escapeHtml(String(v)) : String(v));
+    const srcs = accs.filter((a) => a && Array.isArray(a.owners) && a.owners.some((o) => o && !o.isSelf && same(o.ownerId, ownerId)));
+    const dests = accs.filter((a) => a && Array.isArray(a.owners) && a.owners.length > 0 && a.owners.every((o) => o && !o.isSelf && same(o.ownerId, ownerId)));
+    const fill = (id, list) => { const el = document.getElementById(id); if (el) el.innerHTML = list.map((a) => '<option value="' + esc(a.id) + '">' + esc(a.name || a.id) + '</option>').join(''); };
+    fill('titipanReturnSrc', srcs);
+    fill('titipanReturnDest', dests);
+    this._hasSrc = srcs.length > 0; this._hasDest = dests.length > 0;
+  },
+
+  // S2917: tampilkan pilihan rekening sesuai tujuan uang.
+  onModeChange() {
+    const modeEl = document.getElementById('titipanReturnMode');
+    const mode = modeEl ? modeEl.value : 'riwayat';
+    const srcW = document.getElementById('titipanReturnSrcWrap');
+    const dstW = document.getElementById('titipanReturnDestWrap');
+    if (srcW) srcW.hidden = mode === 'riwayat';
+    if (dstW) dstW.hidden = mode !== 'rekening';
   },
 
   // save() — baca form, panggil `DanaTitipanPortfolioAPI.recordReturn()`
@@ -389,7 +416,7 @@ const DanaTitipanReturnUI = {
   // validasi baru di sini). `recordReturn()` melempar Error kalau
   // validasi gagal, dibungkus try/catch pola sama
   // `DanaTitipanCommitmentUI.save()`.
-  save() {
+  async save() {
     if (typeof DanaTitipanPortfolioAPI === 'undefined') { if (typeof toast === 'function') toast('⚠️ Fitur pengembalian dana titipan belum siap dimuat'); return; }
     const ownerIdEl = document.getElementById('titipanReturnOwnerId');
     const ownerId = ownerIdEl ? ownerIdEl.value : '';
@@ -401,9 +428,24 @@ const DanaTitipanReturnUI = {
     const returnDate = (document.getElementById('titipanReturnDate') || {}).value || '';
     const notes = (document.getElementById('titipanReturnNotes') || {}).value || '';
     try {
-      const result = DanaTitipanPortfolioAPI.recordReturn({ ownerId, ownerName, amount, returnDate, notes });
+      const mode = (document.getElementById('titipanReturnMode') || {}).value || 'riwayat';
+      let result;
+      if (mode === 'riwayat') {
+        result = DanaTitipanPortfolioAPI.recordReturn({ ownerId, ownerName, amount, returnDate, notes });
+      } else {
+        const amt = (typeof parseAmtStrict === 'function') ? parseAmtStrict(String(amount)) : Number(amount);
+        const input = { ownerId, amount: amt, returnDate, notes, mode,
+          sourceAccountId: (document.getElementById('titipanReturnSrc') || {}).value || '',
+          destAccountId: (document.getElementById('titipanReturnDest') || {}).value || '' };
+        result = DanaTitipanPortfolioAPI.recordReturnWithTransfer(input);
+        if (result && result.minus && typeof askConfirm === 'function') {
+          const ok = await askConfirm(result.reason + '. Tetap lanjutkan (saldo bisa minus)?', { okText: 'Ya, lanjut' });
+          if (!ok) return;
+          result = DanaTitipanPortfolioAPI.recordReturnWithTransfer({ ...input, izinkanMinus: true });
+        }
+      }
       if (result === false || (result && result.ok === false)) {
-        if (typeof toast === 'function') toast('⚠️ Gagal mencatat pengembalian dana titipan');
+        if (typeof toast === 'function') toast('⚠️ ' + ((result && result.reason) || 'Gagal mencatat pengembalian dana titipan'));
         return;
       }
     } catch (e) {
@@ -427,7 +469,7 @@ const DanaTitipanReturnUI = {
   async deleteEntry(id) {
     if (typeof DanaTitipanPortfolioAPI === 'undefined') return;
     if (typeof askConfirm === 'function') {
-      const ok = await askConfirm('Hapus riwayat pengembalian ini?', { okText: 'Ya, Hapus' });
+      const ok = await askConfirm('Hapus riwayat pengembalian ini? (Transfer/pengeluaran yang tertaut ikut dibatalkan.)', { okText: 'Ya, Hapus' });
       if (!ok) return;
     }
     const result = DanaTitipanPortfolioAPI.deleteReturn(id);
