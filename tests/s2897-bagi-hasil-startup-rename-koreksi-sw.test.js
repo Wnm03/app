@@ -145,7 +145,7 @@ test('P2-1+: precache tahan satu URL gagal; activate tidak menghapus cache lama 
   const mk = (failUrl, newCount) => {
     const added = []; const deleted = [];
     const cacheNew = { addAll: async () => { throw new Error('404'); }, add: async (u) => { if (u === failUrl) throw new Error('x'); added.push(u); }, keys: async () => new Array(newCount) };
-    const caches = { open: async () => cacheNew, keys: async () => ['kw-cache-v1', 'kw-cache-v2910'], delete: async (k) => { deleted.push(k); }, match: async () => undefined };
+    const caches = { open: async () => cacheNew, keys: async () => ['kw-cache-v1', fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8').match(/CACHE_NAME\s*=\s*['"]([^'"]+)['"]/)[1]], delete: async (k) => { deleted.push(k); }, match: async () => undefined };
     const { listeners } = swCtx({ caches }); return { listeners, added, deleted };
   };
   const a = mk('./app-bundle-a.min.js', 3); let p; await new Promise((res) => { a.listeners.install({ waitUntil: (x) => { p = x; } }); res(); }); await p;

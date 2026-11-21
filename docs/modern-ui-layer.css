@@ -1595,3 +1595,9 @@ html body[data-theme="modern"] #dashHubTickerModern .bill-stat-pill .stat-label 
 /* S2816 B6 — teks panjang boleh membungkus/terpotong anggun, bukan meluap beberapa piksel. */
 .dashhub-feature-name { overflow-wrap: anywhere; min-width: 0; }
 #page-carnotes .bbm-val { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+
+/* S2896 (lanjutan): tombol peringatan harga Kasir — area sentuh 44x44; lingkaran visual tetap 22px (::before). Ditaruh di sini karena styles.css berada tepat di batas anggarannya. */
+.kasir-tile-pricewarn{top:-18px;left:-18px;width:44px;height:44px;isolation:isolate;background:transparent;border:0;box-shadow:none}
+.kasir-tile-pricewarn::before{content:"";position:absolute;z-index:-1;width:22px;height:22px;box-sizing:border-box;border-radius:50%;background:var(--surface);border:1px solid var(--border2);box-shadow:var(--shadow-btn-dark-b)}
+.kasir-tile-pricewarn.kasir-tile-pricewarn-inline{top:auto;left:auto;width:auto;min-width:44px;min-height:44px;height:auto}
+.kasir-tile-pricewarn.kasir-tile-pricewarn-inline::before{display:none}

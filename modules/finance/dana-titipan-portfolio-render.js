@@ -89,6 +89,26 @@ const DanaTitipanPortfolioPresenter = {
     return (n >= 0 ? '+' : '') + this._money(n);
   },
 
+  // S2905 — _ownerAlign(o): nilai pemilik titipan = POKOK, untung hanya CATATAN (hasil tidak dibagi ke pemilik titipan).
+  // Selisih nilai holding di atas biaya tercatat (mis. mas sihab: pokok 1.700.000, biaya 1.673.502, nilai 1.700.000 -> 26.498)
+  // adalah pokok yang belum tercatat sbg biaya, BUKAN hasil: diselaraskan ke pokok (align), sebesar min(sisa pokok belum teralokasi,
+  // jumlah untung positif holding). Sisa di atas itu tetap tampil sbg "belum teralokasi" (uang menganggur, tak ditutup-tutupi).
+  // masuk = biaya + align (= pokok - dipakai bila seluruh sisa terselaraskan); kini = masuk; catatan = nilai holding - masuk (rugi/untung riil, informatif).
+  // Hanya TAMPILAN (agregasi/kekayaan bersih tak diubah); hanya status OK dgn pokok tercatat; selain itu angka mentah.
+  _ownerAlign(o) {
+    const n = (x) => Number(x) || 0;
+    const alloc = n(o && o.allocatedPrincipal), cur = n(o && o.currentValue), gain = n(o && o.gain);
+    const ok = !!o && o.allocationStatus === 'OK' && o.principalAmount !== null && o.principalAmount !== undefined;
+    if (!ok) return { adj: false, align: 0, masuk: alloc, kini: cur, catatan: gain, sisa: n(o && o.estimatedUnallocated) };
+    const sisa = Math.max(0, n(o.estimatedUnallocated));
+    const posGain = (o.holdings || []).reduce((a, h) => a + Math.max(0, n(h && h.gain)), 0);
+    let align = Math.min(sisa, posGain); if (align < 0.5) align = 0;
+    const masuk = alloc + align;
+    let catatan = cur - masuk; if (Math.abs(catatan) < 0.5) catatan = 0;
+    let sisaAkhir = sisa - align; if (sisaAkhir < 0.5) sisaAkhir = 0;
+    return { adj: true, align, masuk, kini: masuk, catatan, sisa: sisaAkhir };
+  },
+
   _gainCls(n) {
     if (n > 0) return 'green';
     if (n < 0) return 'red';
@@ -125,7 +145,7 @@ const DanaTitipanPortfolioPresenter = {
     }
     const pokok = Number(o.principalAmount) || 0;
     const over = Number(o.overAllocatedAmount) || 0;
-    const terpakai = (o.allocationStatus === 'OVER_ALLOCATED') ? pokok + over : pokok - (Number(o.estimatedUnallocated) || 0);
+    const terpakai = (o.allocationStatus === 'OVER_ALLOCATED') ? pokok + over : pokok - this._ownerAlign(o).sisa;
     let t = 'Pokok ' + this._moneyShort(pokok) + ', terpakai ' + this._moneyShort(terpakai);
     if (over > 0) t += ', kelebihan ' + this._moneyShort(over);
     else t += ', sisa ' + this._moneyShort(Math.max(0, pokok - terpakai));
@@ -153,7 +173,7 @@ const DanaTitipanPortfolioPresenter = {
     if (o.allocationStatus === 'OVER_ALLOCATED') {
       return `<span class="titipan-over-badge red">⚠️ Lebih ${this._money(o.overAllocatedAmount)}</span>`;
     }
-    return `<span class="u-fw700">${this._money(o.estimatedUnallocated)}</span>`;
+    return `<span class="u-fw700">${this._money(this._ownerAlign(o).sisa)}</span>`;
   },
 
   // _outstandingCell(o) — Sesi 486 (Case F). Label WAJIB "Pokok Belum
@@ -799,10 +819,10 @@ const DanaTitipanPortfolioPresenter = {
             <span>${o.allocationStatus === 'OVER_ALLOCATED' ? '⚠️ ' : ''}👤 ${escapeHtml(o.ownerName)}</span>
             <span class="titipan-status-line u-fs11 ${o.allocationStatus === 'OVER_ALLOCATED' ? 'red' : 'u-t2'}">${escapeHtml(this._ownerStatusSentence(o))}</span>
             <span>
-              <span class="u-t2">Masuk holding</span> <span class="u-fw700 money">${this._money(o.allocatedPrincipal)}</span>
+              <span class="u-t2">Masuk holding</span> <span class="u-fw700 money">${this._money(this._ownerAlign(o).masuk)}</span>
               &nbsp;→&nbsp;
-              <span class="u-t2">Kini</span> <span class="u-fw700 money">${this._money(o.currentValue)}</span>
-              &nbsp;<span class="u-fw700 money ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
+              <span class="u-t2">Kini</span> <span class="u-fw700 money">${this._money(this._ownerAlign(o).kini)}</span>
+              &nbsp;${this._ownerAlign(o).adj ? `<span class="u-t2 u-fs10">catatan hasil</span> <span class="money ${this._gainCls(this._ownerAlign(o).catatan)}">${this._gainMoney(this._ownerAlign(o).catatan)}</span>` : `<span class="u-fw700 money ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>`}
             </span>
           </summary>
           <!-- SESI 632 (audit S631, rekomendasi #2): grid detail (Pokok
@@ -823,13 +843,14 @@ const DanaTitipanPortfolioPresenter = {
             <div class="titipan-detail-grid u-fs11 u-mt4" style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px">
               <span class="u-t2">Pokok Dikomit</span><span>${this._principalCell(o)}</span>
               ${(() => { const cmp = this._expenseComparisonForOwner(o); return cmp ? `<span class="u-t2">Estimasi dari Transaksi ${escapeHtml(cmp.accountNames.join(', '))}</span><span class="u-fw700">${this._money(cmp.total)}</span>` : ''; })()}
-              <span class="u-t2">Teralokasi ke Holding</span><span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
+              <span class="u-t2">Teralokasi ke Holding</span><span class="u-fw700">${this._money(this._ownerAlign(o).masuk)}</span>
+              ${this._ownerAlign(o).align > 0 ? `<span class="u-t2">Termasuk selaras ke pokok (nilai holding di atas biaya tercatat)</span><span class="u-fw700 titipan-selisih-pokok">${this._money(this._ownerAlign(o).align)}</span>` : ''}
               <span class="u-t2">Dipakai (Transaksi Titipan)</span><span class="u-fw700">${this._money(o.usedTotal)}</span>
               <span class="u-t2">Dipinjam (Utang)</span>${this._debtPinjamCellHtml(o)}
               ${o.bagiHasilTotal > 0 ? `<span class="u-t2">Bagi Hasil Proyek (belum dibayar${o.bagiHasilKoreksi ? ' · menunggu koreksi laba' : ''})</span><span class="u-fw700 u-pointer findash-card-sub-link" data-action="goToList" data-args="${escapeHtml(JSON.stringify(['debtList', null, null, null, null, 'utangpiutang']))}" role="button" tabindex="0" aria-label="Lihat bagi hasil proyek di Buku Utang">${this._money(o.bagiHasilTotal)}</span>` : ''}
               <span class="u-t2">Estimasi Belum Teralokasi</span><span>${this._unallocatedCell(o)}</span>
-              <span class="u-t2">Nilai Saat Ini</span><span class="u-fw700">${this._money(o.currentValue)}</span>
-              <span class="u-t2">Untung-Rugi</span><span class="u-fw700 ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
+              <span class="u-t2">Nilai Saat Ini</span><span class="u-fw700">${this._money(this._ownerAlign(o).kini)}</span>
+              <span class="u-t2">${this._ownerAlign(o).adj ? 'Catatan Untung-Rugi (tidak dibagi)' : 'Untung-Rugi'}</span><span class="u-fw700 ${this._gainCls(this._ownerAlign(o).catatan)}">${this._gainMoney(this._ownerAlign(o).catatan)}</span>
               <span class="u-t2">Sudah Dikembalikan</span><span class="u-fw700">${this._money(o.returnedTotal)}</span>
               <span class="u-t2">Pokok Belum Dikembalikan</span><span>${this._outstandingCell(o)}</span>
             </div>
@@ -1440,15 +1461,18 @@ const DanaTitipanPortfolioPresenter = {
     // string yang dicek test (mis. "Total Kelebihan Alokasi",
     // "Pengeluaran Majoris") tetap ada di innerHTML, cuma disembunyikan
     // visual sampai user tap "🔍 Rincian Audit & Rekonsiliasi".
+    const _al = (projection.owners || []).map((o) => this._ownerAlign(o));
+    const alignTotal = _al.reduce((a, x) => a + x.align, 0), masukTotal = _al.reduce((a, x) => a + x.masuk, 0), kiniTotal = _al.reduce((a, x) => a + x.kini, 0), catatanTotal = _al.reduce((a, x) => a + x.catatan, 0);
+    const sisaTotal = Math.max(0, projection.totals.estimatedUnallocatedTotal - alignTotal) < 0.5 ? 0 : Math.max(0, projection.totals.estimatedUnallocatedTotal - alignTotal);
     el.innerHTML = poolSummary + addBtn + expenseBtn + filterBarHtml + `
       <div class="u-fs11 u-t2 u-mt10 u-mb4">Dana titipan dalam investasi (per pemilik, teralokasi ke instrumen):</div>
       ${this._ownerListHtml(filteredOwners)}
       <div class="titipan-card titipan-card-hero u-mt10">
         <span class="titipan-pool-lbl">Total Teralokasi</span>
         <span class="titipan-pool-amt">
-          ${this._money(projection.totals.allocatedPrincipalTotal)}
-          → ${this._money(projection.totals.currentValueTotal)}
-          &nbsp;<span class="${this._gainCls(projection.totals.gainTotal)}">${this._gainMoney(projection.totals.gainTotal)}</span>
+          ${this._money(masukTotal)}
+          → ${this._money(kiniTotal)}
+          &nbsp;<span class="u-t2 u-fs10">catatan hasil</span> <span class="${this._gainCls(catatanTotal)}">${this._gainMoney(catatanTotal)}</span>
         </span>
       </div>
       <details class="titipan-detail-toggle titipan-audit-toggle u-mt6">
@@ -1487,10 +1511,10 @@ const DanaTitipanPortfolioPresenter = {
       })()}
       <div class="u-flex u-jcb u-fs11 u-mt2">
         <span class="u-t2">Total Estimasi Belum Teralokasi</span>
-        <span class="u-fw700">${this._money(projection.totals.estimatedUnallocatedTotal)}</span>
+        <span class="u-fw700">${this._money(sisaTotal)}</span>
       </div>
-      ${projection.totals.estimatedUnallocatedTotal > 0 ? `
-      <button type="button" class="btn btn-ghost btn-full btn-sm u-mt4" data-action="TitipanExpenseUI.open" data-args='[${Math.round(projection.totals.estimatedUnallocatedTotal)}]'>📤 Catat Dana Keluar dari Sisa Belum Teralokasi</button>
+      ${sisaTotal > 0 ? `
+      <button type="button" class="btn btn-ghost btn-full btn-sm u-mt4" data-action="TitipanExpenseUI.open" data-args='[${Math.round(sisaTotal)}]'>📤 Catat Dana Keluar dari Sisa Belum Teralokasi</button>
       <div class="u-fs10 u-t2 u-mt2">Buat pinjaman/utang (centang "Talangan" di form) atau transaksi biasa dari sisa dana ini — jumlah sudah terisi otomatis, bisa diubah.</div>
       ` : ''}
       ${projection.totals.overAllocatedTotal > 0 ? `

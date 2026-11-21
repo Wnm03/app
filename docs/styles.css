@@ -43,8 +43,7 @@
 --shadow-toggle-thumb: 0 1px 3px rgba(0,0,0,.3);
 --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
 }
-/* S2310: token gradient WAJIB di scope tema, bukan :root. --accent/--accent3 hanya ada di [data-theme] (body);
-   var() di :root jadi invalid-at-computed-value-time -> .btn-primary, .nav-fab-icon, .nav-dot, .header-brand span tanpa latar. */
+/* S2310: token gradient WAJIB di scope tema ([data-theme]), bukan :root. */
 [data-theme] { --grad-accent: linear-gradient(135deg, var(--accent), var(--accent3)); --grad-accent-diag: linear-gradient(120deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 55%, var(--accent3)) 100%); }
 .stat-val, .tx-amount, .shop-price-final, .shop-price-strike, .ldr-days, .ldr-fill, .money, .card-val { font-variant-numeric: tabular-nums; }
 [data-theme="modern"] .stat-val, [data-theme="modern"] .tx-amount, [data-theme="modern"] .shop-price-final, [data-theme="modern"] .shop-price-strike, [data-theme="modern"] .ldr-days, [data-theme="modern"] .money, [data-theme="modern"] .card-val { font-family: var(--font-mono); }
@@ -2129,10 +2128,7 @@ flex: 0 0 auto;
 .header-badge { min-width: 34px; min-height: 34px; }
 .card-setting-btn { min-height: 34px; }
 }
-/* S256AA — Real UI responsive hardening (Car Notes / AI / Settings).
-   Root-cause containment only: preserve horizontal scrolling where it is an
-   intentional list affordance, but prevent child intrinsic sizes from widening
-   the document viewport. */
+/* S256AA — responsive hardening (Car Notes / AI / Settings). */
 #page-carnotes,
 #page-carnotes > .pwa-domain-page,
 #page-carnotes .pwa-domain-car,
@@ -3401,8 +3397,7 @@ padding: 0; display: inline-flex; align-items: center; justify-content: center;
 font-size: 15px; line-height: 1;
 }
 
-
-/* S2311 UI/UX: keep the shared quick-action trigger legible and its menu adjacent to the bottom navigation. */
+/* S2311: quick-action trigger & menu dekat nav bawah. */
 .nav-fab { min-width:44px; position:relative; }
 .nav-fab-icon {
   background:var(--accent, #4f46e5);
@@ -3437,14 +3432,14 @@ font-size: 15px; line-height: 1;
   font:600 14px/1.25 'Plus Jakarta Sans',sans-serif; cursor:pointer;
 }
 .nav-fab-menu button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-/* Contextual page FABs are positioned just above the nav, not over page content/sub-tabs. */
+/* FAB halaman di atas nav. */
 .keu-fab { bottom:calc(76px + env(safe-area-inset-bottom, 0px)); }
 .keu-fab-actions { gap:8px; max-width:min(92vw, 390px); }
 .keu-fab-action {
   background:var(--surface2); color:var(--text); border-color:var(--border2);
   box-shadow:0 6px 20px rgba(0,0,0,.22); min-height:44px;
 }
-/* Finance: one compact, horizontally scrollable row for the seven primary destinations. */
+/* Finance: 7 tujuan utama, satu baris scroll. */
 #page-keuangan > .cn-tabs {
   display:flex; flex-wrap:nowrap; gap:6px; overflow-x:auto; overflow-y:hidden;
   white-space:nowrap; scrollbar-width:none; -webkit-overflow-scrolling:touch;
@@ -3466,19 +3461,19 @@ font-size: 15px; line-height: 1;
   .nav-fab-menu { width:calc(100vw - 20px); }
 }
 
-/* S2617 — legacy per-page FABs are inert; central navigation FAB remains active. */
+/* S2617: FAB per-halaman lama nonaktif; FAB navigasi pusat aktif. */
 #keuFab, #laporanFab { display: none !important; pointer-events: none !important; }
 
-/* Preorder tiles remain actionable even when physical stock is zero. */
+/* Preorder tetap aktif saat stok 0. */
 .kasir-tile-preorder{border-style:dashed;cursor:pointer;opacity:1;}
 
-/* Fix 320px: tombol Penuhi/Batal antrean preorder tidak boleh terpotong ("Penu/hi"). */
+/* 320px: tombol antrean preorder tidak terpotong. */
 .preorder-act{white-space:nowrap;flex-shrink:0;min-width:max-content}
 #preorderPanel .tx-del.preorder-act{width:auto;min-width:44px;padding:0 10px;white-space:nowrap}
 #preorderPanel .tx-item{gap:8px;align-items:center}
 #preorderPanel .tx-item .u-flex1{min-width:0;overflow-wrap:anywhere}
 
-/* Sesi follow-up preorder/kasir: layout sempit 320px tanpa mengubah alur transaksi. */
+/* Preorder/kasir: layout 320px. */
 .preorder-config-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:end}
 .preorder-config-fields .fg{min-width:0}
 @media(max-width:360px){
@@ -3489,4 +3484,20 @@ font-size: 15px; line-height: 1;
   .preorder-config-fields{grid-template-columns:minmax(0,1fr)}
   .preorder-config-fields .fi{width:100%;min-width:0}
   .toast{bottom:calc(148px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 20px)}
+}
+
+/* S2893 Dana Titipan: kalimat status, HP tanpa geser samping */
+.titipan-owner-card>summary>.titipan-status-line{flex:1 1 100%!important;order:1;line-height:1.35}
+.titipan-owner-card>summary>*:last-child:not(.titipan-status-line){order:2}
+.titipan-owner-card>summary::after{order:3}
+.titipan-pool-sentence{font-size:14px;line-height:1.4}
+.titipan-pool-detail>summary{list-style:none}
+.titipan-pool-detail>summary::-webkit-details-marker{display:none}
+:is(.titipan-pool-detail,.titipan-ledger-toggle,.titipan-detail-toggle,.titipan-linkasset-toggle)>summary{padding:14px 0}
+.titipan-holding-row button,.titipan-owner-card .tx-tbl-name-btn,.titipan-custodian-group>summary{padding:12px 0!important}
+@media(max-width:640px){
+.tx-tbl.titipan-owner-tbl,.titipan-owner-card .tx-tbl,.titipan-owner-card .tx-tbl-desc{min-width:0}
+.titipan-owner-tbl,.titipan-owner-tbl tbody,.titipan-owner-tbl tr,.titipan-owner-tbl td{display:block;width:100%;max-width:100%;box-sizing:border-box}
+.titipan-owner-tbl thead{display:none}
+.titipan-owner-tbl .titipan-tbl-owner-cell{padding:0;border:0}
 }
