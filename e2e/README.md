@@ -19,3 +19,13 @@ Memakai backup pribadi asli (TIDAK ikut repo/patch; dibaca dari path env, tidak 
     E2E_SHOTS=/dir  E2E_PROJECT=<id>          # opsional: tangkapan layar / paksa proyek
 
 Butuh Playwright (`playwright` global atau `/opt/npm-tools`); mengunci ROOT ke repo (`ROOT=` untuk tree lain). 33 pemeriksaan: paritas dana klien (`isAliranKlien` = biaya status dana), hak W & guard pencairan (hak+1 ditolak, kunci ganda idempoten), utang bagi hasil penerima + kartu Dana Titipan, saldo pribadi naik tepat sebesar pencairan, penerima manual (OwnerRegistry, tanpa ID ganda), tanda minus, tanpa NaN/scroll horizontal/error JS. Pemeriksaan INVARIAN dihitung dari isi backup; angka emas (4.307.418 / 800.000 / 1.588.100) hanya dicek bila SHA-256 backup = backup 20 Nov 2026. Exit: 0 lulus, 1 gagal, 2 error harness, 3 dilewati.
+
+## E2E Sesi E (v2925+) — round-trip backup, D3 via pembayaran tagihan, varian backup — permanen, opt-in
+
+Memakai backup pribadi asli (TIDAK ikut repo/patch; dibaca dari path env, tidak ditulis ke mana pun):
+
+    BACKUP=/path/backup-keluarga-W.json npm run test:e2e:sesi-e
+    E2E_SKIP_OK=1 npm run test:e2e:sesi-e     # exit 0 bila BACKUP/browser tidak ada (CI tanpa data)
+
+47 pemeriksaan invarian: (A) `buildBackupPayload` -> `importData` lewat input file nyata -> jumlah koleksi, saldo semua akun, hash transaksi/akun/piutang/utang/tagihan sama dan ekspor ulang identik; (B) piutang "Ditanggung Bersama" dibuat lewat `markBillPaid` (bukan data langsung), lalu lunas ke BRI / buka lagi / batal dialog; (C) tiga varian backup: akun tanpa field kepemilikan, semua akun INVESTOR (fallback), tanpa kategori Piutang/Utang.
+

@@ -38,9 +38,9 @@ function exportCSV(){
 const {from,to}=getRange();
 const f=getLaporanFilters();
 const txs=D.transactions.filter(t=>{const d=new Date(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(String(t.date||'')+'T00:00:00').getTime());return d>=from&&d<=to&&t.type!=='transfer_in'&&t.type!=='transfer_out'&&txMatchesFilters(t,f);});
-const rows=[['Tanggal','Tipe','Kategori','Subkategori','Akun','Metode','Jumlah','Keterangan','Category ID','Subcategory ID','Transaction ID','Import Idempotency Key'],...txs.map(t=>{
+const rows=[['Tanggal','Tipe','Kategori','Subkategori','Akun','Metode','Jumlah','Keterangan','Category ID','Subcategory ID','Transaction ID','Import Idempotency Key','Hitung Kas','Aliran Klien'],...txs.map(t=>{
 const accName=D.accounts.find(a=>a.id===t.accountId)?.name||'';
-return[t.date,t.type==='income'?'Pemasukan':'Pengeluaran',t.category,t.subcategory||'',accName,t.payMethod||'tunai',t.amount,t.note||'',t.categoryId||'',t.subcategoryId||'',t.id||'',t.importIdempotencyKey||''];
+return[t.date,t.type==='income'?'Pemasukan':'Pengeluaran',t.category,t.subcategory||'',accName,t.payMethod||'tunai',t.amount,t.note||'',t.categoryId||'',t.subcategoryId||'',t.id||'',t.importIdempotencyKey||'',t.hitungKas===false?'Tidak':'Ya',(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))?'Ya':'Tidak'];
 })];
 const blob=new Blob([rows.map(r=>r.map(_reportCsvCell).join(',')).join('\n')],{type:'text/csv'});
 _downloadBackupBlob(blob,'laporan-W-'+_backupTodayStr()+'.csv');
@@ -1550,6 +1550,9 @@ const txIdKey=headers.find(h=>h==='transaction id'||h==='id'||h==='tx id');
 if(txIdKey&&row[txIdKey])tx.id=row[txIdKey];
 const keyKey=headers.find(h=>h==='import idempotency key'||h==='idempotency key'||h==='importidempotencykey');
 if(keyKey&&row[keyKey])tx.importIdempotencyKey=row[keyKey];
+// Sesi D (v2925): pulihkan penanda "catatan saja" dari kolom Hitung Kas hasil ekspor. "Aliran Klien" sengaja diabaikan: nilai turunan (dari tautan proyek), bukan field tersimpan.
+const hitungKasKey=headers.find(h=>h==='hitung kas'||h==='hitungkas');
+if(hitungKasKey&&/^(tidak|no|false|0)$/i.test(String(row[hitungKasKey]).trim()))tx.hitungKas=false;
 if(tx.amount>0){
   const _fp=_importTxFingerprint(tx)||'';
   const _occ=(fingerprintOccurrences.get(_fp)||0)+1;

@@ -50,6 +50,7 @@ income:[
 {id:'cat_cb',name:'Bisnis',emoji:'🪨',subs:[{id:'sub_cb_cobek',name:'Cobek'}]},
 {id:'cat_tb',name:'Tambahan',emoji:'➕',subs:[]},
 {id:'cat_utang',name:'Utang',emoji:'🤝',subs:[]},
+{id:'cat_piutang_in',name:'Piutang',emoji:'🤝',subs:[]},
 {id:'cat_ll',name:'Lainnya',emoji:'📦',subs:[]}
 ],
 expense:[
@@ -64,6 +65,7 @@ expense:[
 {id:'cat_inv',name:'Investasi',emoji:'📈',subs:[]},
 {id:'cat_sedekah',name:'Sedekah/Donasi',emoji:'🤲',subs:[]},
 {id:'cat_piutang',name:'Piutang',emoji:'🤝',subs:[]},
+{id:'cat_utang_out',name:'Utang',emoji:'🤝',subs:[]},
 {id:'cat_lx',name:'Lainnya',emoji:'📦',subs:[]}
 ]
 };

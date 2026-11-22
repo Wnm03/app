@@ -1063,7 +1063,7 @@ const _dbtSnap=D.debts.find(x=>sameId(x.id,b.debtId));
 if(_dbtSnap)debtNilaiBefore=_dbtSnap.nilai||0;
 }
 const _paymentAtomic=FinanceCrossEntityAtomic.begin(['transactions','bills','billsArchive','debts','piutang','renovProjects']);
-let _paymentAtomicCommitted=false;
+let _paymentAtomicCommitted=false;if(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT.ensureDebtLedgerCategories)FinanceCategorySOT.ensureDebtLedgerCategories();/* B2 v2925 */
 try{
 FinanceTxSOT.create({id:_payTxId,type:'expense',amount:payAmount,category:b.category||(_renovBillProject&&typeof renovBillDefaultCategory==='function'&&renovBillDefaultCategory())||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue,debtNilaiBefore,...(_renovBillProject?{renovProjectLinkId:_renovBillProject.id}:{}),...(_renovBillOwnerId?{deductionOwnerId:_renovBillOwnerId}:{}),...(_talMeta||{})});
 // S2822: tautkan pembayaran ke item Proyek Renovasi (item.payments) -- ikut rollback atomik ('renovProjects' di snapshot).
@@ -1148,7 +1148,7 @@ toast('✅ Dibayar & dijadwalkan ulang.'+sisaMsg+(typeof billTalanganNote==='fun
 }catch(_paymentAtomicErr){
   if(_paymentAtomicCommitted&&typeof _paymentAtomic.rollbackAfterCommit==='function')_paymentAtomic.rollbackAfterCommit();
   else _paymentAtomic.rollback();
-  console.error('S2196: atomic bill payment rollback',_paymentAtomicErr);
+  console.error('S2196: atomic bill payment rollback',_paymentAtomicErr);if(_paymentAtomicErr&&_paymentAtomicErr.message==='FINANCE_CATEGORY_UNRESOLVED'&&typeof toast==='function'){toast(FinanceCategorySOT.unresolvedMessage(b.category),6000);return false;}/* B2 v2925 */
   throw _paymentAtomicErr;
 }
   }finally{

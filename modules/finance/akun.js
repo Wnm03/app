@@ -443,7 +443,7 @@ function adaTxTitipanPemilikSafe(){return (D.transactions||[]).some(t=>t&&t.type
 function titipanPemilikBulanSafe(y,m0){let s=0;(D.transactions||[]).forEach(t=>{if(!t||t.type!=='expense'||t.hitungKas===false||!isTxDeductionNonSelfSafe(t))return;const d=new Date(t.date);if(d.getFullYear()!==y||d.getMonth()!==m0)return;s+=Number(t.amount)||0;});return s;}
 function catatanHubTitipanSafe(anchor){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const d=new Date(),v=titipanPemilikBulanSafe(d.getFullYear(),d.getMonth());let n=document.getElementById('dashHubHeroTitipan');if(!(v>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id='dashHubHeroTitipan';n.style.cssText='font-size:11px;opacity:.8;margin-top:2px';anchor.parentNode.appendChild(n);}n.textContent='Pengeluaran bulan ini belum termasuk titipan pemilik lain '+fmtFull(v);}
 function catatanHubTalanganSafe(anchor){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=(typeof talanganBelumDiganti==='function')?talanganBelumDiganti():null;let n=document.getElementById('dashHubHeroTalangan');if(!r||!(r.total>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id='dashHubHeroTalangan';n.style.cssText='font-size:11px;opacity:.8;margin-top:2px';anchor.parentNode.appendChild(n);}n.textContent='Talangan belum diganti pemilik titipan '+fmtFull(r.total)+(r.owners.length>1?' ('+r.owners.map(o=>o.ownerName+' '+fmtFull(o.amount)).join(', ')+')':'');}
-function isAliranKlienSafe(t){if(typeof isAliranKlien!=='function'){ensureKlienEngineSafe();}else if(isAliranKlien(t))return true;if(t&&t.talanganPelunasanOwnerId)return true;/* S2848: pelunasan talangan = bukan pendapatan pribadi */if(typeof isTxDeductionNonSelfSafe==='function'&&isTxDeductionNonSelfSafe(t))return true;if(t&&t.accountId!=null&&t.accountId!==''&&typeof isAccOwnershipSelf==='function'&&typeof sameId==='function'){const a=(D.accounts||[]).find(x=>x&&sameId(x.id,t.accountId));if(a&&!isAccOwnershipSelf(a))return true;}return false;}
+function isAliranKlienSafe(t){if(typeof isAliranKlien!=='function'){ensureKlienEngineSafe();}else if(isAliranKlien(t))return true;if(t&&t.talanganPelunasanOwnerId)return true;/* S2848: pelunasan talangan = bukan pendapatan pribadi */if(t&&(t.type==='income'||t.type==='expense')&&/^(piutang|utang)$/i.test(String(t.category||'').trim()))return true;/* A2#3 (v2925): beri/terima pinjaman & pelunasannya = perpindahan uang, bukan pendapatan/biaya */if(typeof isTxDeductionNonSelfSafe==='function'&&isTxDeductionNonSelfSafe(t))return true;if(t&&t.accountId!=null&&t.accountId!==''&&typeof isAccOwnershipSelf==='function'&&typeof sameId==='function'){const a=(D.accounts||[]).find(x=>x&&sameId(x.id,t.accountId));if(a&&!isAccOwnershipSelf(a))return true;}return false;}
 // Langkah 5 (U-10): akun yang memuat aliran dana klien (DP/termin, pengembalian, belanja dana proyek) tidak boleh ditautkan ke aset/holding: akun tertaut keluar dari saldo pribadi, sementara dana tertahan tetap dikurangkan.
 function akunPunyaAliranKlienSafe(accId){if(accId==null||accId==='')return false;return (D.transactions||[]).some(t=>t&&sameId(t.accountId,accId)&&isAliranKlienOnlySafe(t));}
 // Tampilan saldo (audit dana proyek): rincian fisik / dana klien tertahan / pribadi. null bila tak ada proyek klien. Hanya BACA; tidak mengubah totalSaldoAkun().
@@ -475,9 +475,11 @@ let incF=0,expF=0,incP=0,expP=0,kIn=0,kOut=0,tOut=0;
 const pribadiTx=[];
 list.forEach(t=>{
 const excl=isAliranKlienSafe(t),klien=(typeof isAliranKlienOnlySafe==='function')?isAliranKlienOnlySafe(t):excl;/* S2842: excl = klien ATAU akun non-SELF; klien murni utk label */
+if(!excl)pribadiTx.push(t);
+/* Catatan saja (hitungKas:false) tetap tampil di daftar tetapi TIDAK masuk total (selaras Beranda, saldo, filter-laporan, cashflow). Mis. jejak "Laba proyek" yang nilainya sudah masuk lewat pencairan klien -> sebelumnya terhitung ganda. */
+if(t.hitungKas===false)return;
 if(t.type==='income'){incF+=t.amount;if(klien)kIn+=t.amount;if(!excl)incP+=t.amount;}
 else if(t.type==='expense'){expF+=t.amount;if(klien)kOut+=t.amount;else if(excl&&isTxDeductionNonSelfSafe(t))tOut+=t.amount;if(!excl)expP+=t.amount;}
-if(!excl)pribadiTx.push(t);
 });
 let efektif=pick,alasan='';
 if(pick==='pribadi'){

@@ -207,6 +207,18 @@ function removeSubcategory(type,catId,subId){
  return c.subs.splice(i,1)[0];
 }
 function ensureCategory(type,data){normalizeMetadata();const c=findByName(type,data&&data.name);if(c){if(data&&data.linkedVehicleId&&!c.linkedVehicleId)c.linkedVehicleId=data.linkedVehicleId;return c;}return addCategory(type,data);}
+// B1/B2 (audit browser v2925): pelunasan piutang = PEMASUKAN 'Piutang', pelunasan/cicilan utang = PENGELUARAN 'Utang'.
+// Default lama hanya membuat expense 'Piutang' & income 'Utang' -> pembuatan transaksi gagal FINANCE_CATEGORY_UNRESOLVED.
+// Idempoten, resolusi tetap per (tipe, nama) -- tidak menyentuh kategori yang sudah ada. Mengembalikan jumlah yang dibuat.
+function ensureDebtLedgerCategories(){
+ let made=0;
+ [[TYPE.INCOME,'Piutang','cat_piutang_in'],[TYPE.EXPENSE,'Utang','cat_utang_out']].forEach(([type,name,id])=>{
+   if(findByName(type,name))return;
+   addCategory(type,{id:findById(type,id)?undefined:id,name,emoji:'🤝',classification:'NON_BELANJA'});made++;
+ });
+ return made;
+}
+function unresolvedMessage(name){return '⚠️ Pembayaran dibatalkan: kategori pengeluaran "'+(name||'Tagihan')+'" tidak ditemukan. Tambahkan kategori itu di Pengaturan → Kategori, lalu coba lagi.';}
 function ensureSubcategory(type,catId,data){const c=findById(type,catId);if(!c)throw new Error('CATEGORY_NOT_FOUND');const s=findSub(c,data&&data.name);if(s)return s;return addSubcategory(type,catId,data);}
 let _mergeStats={categories:0,transactions:0};
 function takeMergeStats(){const o=_mergeStats;_mergeStats={categories:0,transactions:0};return o;}
@@ -281,7 +293,7 @@ function replaceSnapshot(snapshot){
  D.categories={income:Array.isArray(next.income)?next.income:[],expense:Array.isArray(next.expense)?next.expense:[]};
  normalizeMetadata(); return clone(D.categories);
 }
-const api={VERSION,TYPE,CLASSES,SEVEN_CLASSES,normalizeMetadata,mergeDuplicates,takeMergeStats,reconcileBudgetReferences,reconcileLegacyTransactionTaxonomy,list,findById,findByName,findSub,resolve,resolveSeven,classify,matches,addCategory,updateCategory,removeCategory,addSubcategory,updateSubcategory,removeSubcategory,ensureCategory,ensureSubcategory,replaceSnapshot};
+const api={VERSION,TYPE,CLASSES,SEVEN_CLASSES,normalizeMetadata,mergeDuplicates,takeMergeStats,reconcileBudgetReferences,reconcileLegacyTransactionTaxonomy,list,findById,findByName,findSub,resolve,resolveSeven,classify,matches,addCategory,updateCategory,removeCategory,addSubcategory,updateSubcategory,removeSubcategory,ensureCategory,ensureDebtLedgerCategories,unresolvedMessage,ensureSubcategory,replaceSnapshot};
 g.FinanceCategorySOT=api;
 if(typeof window!=='undefined')window.FinanceCategorySOT=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

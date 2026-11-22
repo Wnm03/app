@@ -410,7 +410,7 @@ return out;
 function populateSyncTxAccSelect(selId){
 const el=document.getElementById(selId);
 if(!el)return;
-el.innerHTML=(D.accounts||[]).map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+el.innerHTML='<option value="">— Pilih akun —</option>'+(D.accounts||[]).map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 }
 // togglePiutangSyncTxFields()/toggleDebtSyncTxFields() — tampil/sembunyi
 // wrap Akun sesuai toggle "🧾 Catat juga sebagai transaksi arus kas"
@@ -445,6 +445,8 @@ Object.keys(snap||{}).forEach(k=>{
 });
 }
 function createPiutangUtangAutoTx(type,amount,accountId,category,note,date){
+// B1 (audit v2925): pastikan kategori lawan (income Piutang / expense Utang) ada, utk backup lama juga.
+if(typeof FinanceCategorySOT!=='undefined'&&typeof FinanceCategorySOT.ensureDebtLedgerCategories==='function')FinanceCategorySOT.ensureDebtLedgerCategories();
 const tx={id:uid(),type,amount,category,subcategory:'',accountId,payMethod:'tunai',note,date:date||todayStr()};
 FinanceTxSOT.create(tx);
 return tx.id;
@@ -488,7 +490,7 @@ if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBloc
 const _snap=_bdpAtomicSnapshot(['piutang','transactions']);
 const name=document.getElementById('piutangName').value.trim();
 if(!name){toast('⚠️ Nama peminjam wajib diisi');return;}
-const nilai=parsePzNum(document.getElementById('piutangNilai').value);
+let nilai=parsePzNum(document.getElementById('piutangNilai').value);
 // FIX (BUG-FIN-001): guard nilai<=0 -- sebelumnya parsePzNum() bisa
 // menghasilkan 0 (kosong/non-digit) atau NEGATIF (input diawali "-") tanpa
 // peringatan, lolos tersimpan & ikut ke Total Piutang/Net Worth. Pola sama
@@ -536,7 +538,18 @@ if(typeof recordShopReceivablePayoff==='function'&&typeof _shopReceivableOwner==
 if(becameLunas&&!p.linkedTxId){const _r=recordShopReceivablePayoff(p,{amount:nilai});if(!_r.ok){toast(_r.reason==='ACCOUNT_MISSING'?'⚠️ Akun penerimaan order tidak ditemukan. Pelunasan tidak dicatat.':'⚠️ Pelunasan tidak dapat dicatat ('+_r.reason+')');return;}if(_r.txId)linkedPayoffTxId=_r.txId;}
 else if(p.lunas&&!Piutang._lunasState&&p.linkedPayoffTxId){reverseShopReceivablePayoff(p);linkedPayoffTxId=null;}
 }
+// Sesi C (v2925): D1 nilai piutang tertaut transaksi dikunci; D2 buka lagi membatalkan pemasukan pelunasan; D3 piutang "Ditanggung Bersama" lunas -> pilih akun penerima.
+const _isShopRcv=typeof _shopReceivableOwner==='function'&&_shopReceivableOwner(p);
+if(_bdpLinkedTxAlive(p)&&!p.autoTitipanOwnerId&&nilai!==Math.round(Number(p.nilai)||0)){toast('ℹ️ Nilai piutang yang tercatat sebagai transaksi arus kas tidak bisa diubah di sini. Hapus transaksinya dulu bila nilainya salah.');nilai=p.nilai;}
+let _reopenManual=false;
+if(p.lunas&&!Piutang._lunasState&&p.linkedPayoffTxId&&!p.autoTitipanOwnerId&&!_isShopRcv&&(p.linkedTxId!=null||p.autoBillId!=null)){if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT.findById(p.linkedPayoffTxId))FinanceTxSOT.removeById(p.linkedPayoffTxId);linkedPayoffTxId=null;_reopenManual=true;}
+if(becameLunas&&p.autoBillId!=null&&p.linkedTxId==null&&!linkedPayoffTxId&&!p.autoTitipanOwnerId&&!_isShopRcv&&typeof showChoiceModal==='function'){
+const _allAccs=D.accounts||[];/* Sesi D (v2925): hanya rekening uang milik sendiri; akun INVESTOR/pihak lain (mis. Saldo tagihan) bukan tujuan pelunasan piutang pribadi. Fallback ke semua akun bila filter kosong. */const _selfAccs=typeof isAccOwnershipSelf==='function'?_allAccs.filter(a=>a&&isAccOwnershipSelf(a)):_allAccs;const _accsRaw=_selfAccs.length?_selfAccs:_allAccs;/* Sesi E: akun yang tidak dihitung di total (includeInBalance:false, mis. "p") tetap bisa dipilih tetapi diurutkan paling bawah. */const _accs=_accsRaw.filter(a=>a.includeInBalance!==false).concat(_accsRaw.filter(a=>a.includeInBalance===false));const _ch=await showChoiceModal({title:'Piutang lunas',message:'Uang pelunasan '+fmtFull(nilai)+' masuk ke akun mana? (dicatat sebagai pemasukan Piutang)',choices:_accs.map(a=>({label:(a.emoji||'')+' '+a.name})).concat([{label:'Jangan catat pemasukan'}])});
+if(_ch===null||_ch===undefined)return;
+if(_ch<_accs.length)linkedPayoffTxId=createPiutangUtangAutoTx('income',nilai,_accs[_ch].id,'Piutang','Piutang lunas: '+name,todayStr());
+}
 const _patch={name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState};
+if(_reopenManual)_patch.linkedPayoffTxId=null;
 // S2849: talangan titipan -> nilai = SISA. Lunas: nilai tidak diubah (pemasukan = sisa tersimpan, tak ada yang hilang/dobel); sudah lunas: nilai terkunci;
 // belum lunas + nilai turun: tanya apakah itu pelunasan sebagian (pemasukan non-pribadi sebesar selisih) atau hanya koreksi nilai.
 if(typeof talanganIsPiutang==='function'&&talanganIsPiutang(p)){
@@ -783,7 +796,7 @@ const _snap=_bdpAtomicSnapshot(['debts','bills','billsArchive','piutang','transa
 const name=document.getElementById('debtName').value.trim();
 if(!name){toast('⚠️ Nama pemberi pinjaman wajib diisi');return;}
 const jenis=document.getElementById('debtJenis').value||'lainnya';
-const nilai=parsePzNum(document.getElementById('debtNilai').value);
+let nilai=parsePzNum(document.getElementById('debtNilai').value);
 // FIX (BUG-FIN-001): guard nilai<=0 -- pola sama persis dgn Piutang.save()
 // di atas (lihat komentar di sana).
 if(!Number.isFinite(nilai)||nilai<=0){toast('⚠️ Nilai utang harus lebih dari 0');return;}
@@ -840,6 +853,8 @@ toast(d.renovBagiProjectId!=null?'✅ Status lunas tersimpan. Nilai utang mengik
 // pada utang yang PUNYA linkedTxId otomatis mencatat 1 transaksi
 // pelunasan (expense, ke akun sama dgn transaksi awal). Idempotent via
 // linkedPayoffTxId, pola sama Piutang di atas.
+if(d.linkedTxId!=null&&_bdpLinkedTxAlive(d)&&nilai!==Math.round(Number(d.nilai)||0)){toast('ℹ️ Nilai utang yang tercatat sebagai transaksi arus kas tidak bisa diubah di sini. Hapus transaksinya dulu bila nilainya salah.');nilai=d.nilai;}
+if(d.lunas&&!Debt._lunasState&&d.linkedPayoffTxId&&d.linkedTxId!=null){if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT.findById(d.linkedPayoffTxId))FinanceTxSOT.removeById(d.linkedPayoffTxId);d.linkedPayoffTxId=null;BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.linkedPayoffTxId=null;});}
 const dBecameLunas=!d.lunas&&Debt._lunasState;
 if(dBecameLunas&&d.linkedTxId&&!d.linkedPayoffTxId){
 const dOrigTx=D.transactions.find(t=>sameId(t.id,d.linkedTxId));

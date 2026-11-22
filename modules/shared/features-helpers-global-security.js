@@ -120,8 +120,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2923';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2923';
+const APP_BUILD_VERSION = 's2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2931';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2854-chat-aksi-bayar-lunasi-titipan-renov-stok-2931';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -1423,7 +1423,7 @@ if(Number(_migrationResult)<SCHEMA_VERSION){
  _setPersistenceRecoveryRequired('Migrasi data tidak selesai (schema v'+_migrationResult+' dari target v'+SCHEMA_VERSION+'). State hasil migrasi parsial dibatalkan; snapshot sebelum migrasi dipertahankan untuk recovery.',{fromSchemaVersion:_fromSchemaVersion,migrationResult:_migrationResult});
  return;
 }
-const _continuityPreviousMeta=_readRuntimeMeta();
+try{if(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT.ensureDebtLedgerCategories)FinanceCategorySOT.ensureDebtLedgerCategories();}catch(_e){void _e;}/* B1/B2 v2925: backup lama */ const _continuityPreviousMeta=_readRuntimeMeta();
 const _continuityHighWater=_readContinuityHighWater();
 const _continuityBuild=(typeof APP_BUILD_VERSION!=='undefined'?APP_BUILD_VERSION:null);
 const _continuityBaseline=_continuityHighWater?{..._continuityPreviousMeta,metrics:_continuityHighWater}:_continuityPreviousMeta;

@@ -24,6 +24,7 @@
     "test:e2e": "node e2e/run-e2e.js",
     "test:e2e:backup": "node e2e/s2896-backup-asli.js",
     "test:e2e:pemilik": "node e2e/s2897-konsistensi-pemilik.js",
+    "test:e2e:sesi-e": "node e2e/sesi-e-roundtrip-d3.js",
     "test:e2e:sw": "node e2e/audit-s2896/service-worker-offline-update.js",
     "audit:carnotes-performance": "node scripts/verify-carnotes-performance.js",
     "build:release": "node scripts/build.js --require-minify",
