@@ -49,7 +49,8 @@ _selfTestAssert(Array.isArray(D.wishlist),'D.wishlist harus array (fitur Priorit
 }},
 {name:'totalSaldoAkun() = jumlah manual saldo akun aktif', fn:()=>{
 const linked=linkedAssetAccountIds();
-const manual=D.accounts.filter(a=>a.includeInBalance!==false&&!linked.has(String(a.id))).reduce((s,a)=>s+recalcAccBalance(a.id),0);
+// S192: totalSaldoAkun() juga mengecualikan akun non-SELF (investor/titipan/keluarga) lewat isAccOwnershipSelf() -- hitungan manual harus ikut.
+const manual=D.accounts.filter(a=>a.includeInBalance!==false&&!linked.has(String(a.id))&&(typeof isAccOwnershipSelf!=='function'||isAccOwnershipSelf(a))).reduce((s,a)=>s+recalcAccBalance(a.id),0);
 _selfTestAssert(totalSaldoAkun()===manual,'totalSaldoAkun() ('+totalSaldoAkun()+') tidak sama dengan hitungan manual ('+manual+')');
 }},
 {name:'totalSaldoAkun() mengecualikan akun yang ditautkan dari Buku Aset (cegah dobel hitung Kekayaan Bersih)', fn:()=>{
@@ -447,8 +448,8 @@ _selfTestAssert(!D.assets.some(a=>a.id==='__selftest_asset__'),'Aset sementara t
 const netEl=document.getElementById('kbNetWorth');
 if(netEl&&netEl.textContent){
 renderKekayaanBersih();
-const utangManual=D.pajakZakat.utangJT||parsePzNum(document.getElementById('zmUtang')?document.getElementById('zmUtang').value:0);
-const utang=utangManual+totalDebtValue()+totalCicilanOutstanding();
+// Selaras renderBersih() (SSOT): utang = FI.totalDebt() (tanpa fallback DOM #zmUtang), saldo = saldoPribadiSafe() (saldo akun dikurangi dana klien tertahan).
+const utang=FI.totalDebt();
 // FIX (S482, laporan Tes Otomatis "Buku Aset: totalAssetValue() & Kekayaan Bersih
 // konsisten"): formula ekspektasi di bawah ini ketinggalan zaman -- Kekayaan.renderBersih()
 // (modules-calc.js) & SSOT Kekayaan.currentNetWorth() sejak S476a (Blocker A) SUDAH
@@ -470,7 +471,8 @@ const totalAsetExpected=totalAssetValue()+(typeof Investment!=='undefined'?Inves
 // sudah 100% sama dgn renderBersih()/currentNetWorth(). Bulatkan expected
 // dgn Math.round() supaya dibandingkan setara (apples-to-apples) dgn nilai
 // yang benar-benar dirender ke layar.
-const expected=Math.round(totalSaldoAkun()+totalAsetExpected+totalInventoriBisnisValue()+totalPiutangValue()-utang);
+const saldoExpected=(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
+const expected=Math.round(saldoExpected+totalAsetExpected+totalInventoriBisnisValue()+totalPiutangValue()-utang);
 _selfTestAssert(parsePzNum(netEl.textContent)===expected,'Kekayaan Bersih harus = saldo akun + total aset (termasuk holding investasi porsi SELF) + inventori bisnis + total piutang − (utang manual + utang tercatat + sisa cicilan/paylater), dapat '+parsePzNum(netEl.textContent)+' vs ekspektasi '+expected);
 }
 }},
@@ -578,10 +580,11 @@ _selfTestAssert(removed.ok,'StockCommandSOT harus dapat menghapus item stok seme
 _selfTestAssert(D.partsStock.length===before,'D.partsStock harus kembali ke jumlah semula setelah item sementara dihapus');
 }},
 {name:'getBudgetUsed() & getBudgetEffectiveLimit(): agregasi anggaran total sesuai transaksi bulan berjalan', fn:()=>{
+// B3: Budget.getUsed() melewati transaksi hitungKas:false ("catatan saja") & aliran dana klien -- hitungan manual harus ikut.
 const dummyBudget={id:'__selftest_budget__',catIds:['__total__'],limit:1,rollover:false};
 const manual=D.transactions.filter(t=>{
 const d=new Date(t.date);
-return t.type==='expense'&&d.getMonth()===curMonth&&d.getFullYear()===curYear;
+return t.type==='expense'&&t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))&&d.getMonth()===curMonth&&d.getFullYear()===curYear;
 }).reduce((s,t)=>s+t.amount,0);
 _selfTestAssert(getBudgetUsed(dummyBudget)===manual,'getBudgetUsed() untuk anggaran total harus sama dengan jumlah manual pengeluaran bulan ini');
 _selfTestAssert(getBudgetEffectiveLimit(dummyBudget)===1,'getBudgetEffectiveLimit() tanpa rollover harus sama dengan limit anggaran');
@@ -590,11 +593,11 @@ _selfTestAssert(!D.budgets.some(b=>b.id==='__selftest_budget__'),'Tes tidak bole
 {name:'Anggaran periode (bulanan/tahunan/1x nominal): getBudgetUsed() memakai jendela waktu yg tepat per periode', fn:()=>{
 const manualBulan=D.transactions.filter(t=>{
 const d=new Date(t.date);
-return t.type==='expense'&&d.getMonth()===curMonth&&d.getFullYear()===curYear;
+return t.type==='expense'&&t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))&&d.getMonth()===curMonth&&d.getFullYear()===curYear;
 }).reduce((s,t)=>s+t.amount,0);
 const manualTahun=D.transactions.filter(t=>{
 const d=new Date(t.date);
-return t.type==='expense'&&d.getFullYear()===curYear;
+return t.type==='expense'&&t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))&&d.getFullYear()===curYear;
 }).reduce((s,t)=>s+t.amount,0);
 const bBulanan={id:'__selftest_budget_bulanan__',catIds:['__total__'],limit:1,rollover:false,period:'bulanan'};
 const bTahunan={id:'__selftest_budget_tahunan__',catIds:['__total__'],limit:1,rollover:false,period:'tahunan'};

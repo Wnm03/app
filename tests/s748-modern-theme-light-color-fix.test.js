@@ -1,7 +1,7 @@
 'use strict';
 // tests/s748-modern-theme-light-color-fix.test.js — FIX (akumulasi v1575->1576,
 // audit UI/UX): theme-card "modern" (didaftarkan s640) berlabel "Terang flat &
-// ringan (Minimal)" dgn preview background #fafafa + teks aksen #2f6fed, TAPI
+// ringan (Minimal)" dgn preview background #f6f6f4 + teks aksen #3a68cc, TAPI
 // blok token `[data-theme="modern"]` di styles.css (sejak s635) berisi nilai
 // GELAP (--bg:#0b0b0c dst) -- lolos tanpa terdeteksi krn audit s640 cuma
 // memverifikasi pendaftaran card, bukan mencocokkan literal warna terhadap
@@ -25,29 +25,29 @@ function extractModernBlock(css) {
   return m[1];
 }
 
-test('styles.css — [data-theme="modern"] --bg terang (#fafafa), BUKAN gelap lagi', () => {
+test('styles.css — [data-theme="modern"] --bg terang (#f6f6f4), BUKAN gelap lagi', () => {
   const block = extractModernBlock(stylesCss);
-  assert.match(block, /--bg:#fafafa;/);
+  assert.match(block, /--bg:#f6f6f4;/);
   assert.doesNotMatch(block, /--bg:#0b0b0c/);
 });
 
-test('styles.css — [data-theme="modern"] --accent biru (#2f6fed) sesuai preview theme-card, BUKAN abu lama', () => {
+test('styles.css — [data-theme="modern"] --accent biru (#3a68cc) sesuai preview theme-card, BUKAN abu lama', () => {
   const block = extractModernBlock(stylesCss);
-  assert.match(block, /--accent:#2f6fed;/);
+  assert.match(block, /--accent:#3a68cc;/);
   assert.doesNotMatch(block, /--accent:#9b9b9f/);
 });
 
 test('styles.css — [data-theme="modern"] --text gelap (kontras di atas base terang), --surface terang', () => {
   const block = extractModernBlock(stylesCss);
-  assert.match(block, /--surface:#ffffff;/);
-  assert.match(block, /--text:#18181a;/);
+  assert.match(block, /--surface:#fcfcfb;/);
+  assert.match(block, /--text:#26262a;/);
 });
 
-test('index.html — theme-card "modern" preview & label TIDAK berubah (masih "Terang" + #fafafa) — jadi acuan gate ini tetap valid', () => {
+test('index.html — theme-card "modern" preview & label TIDAK berubah (masih "Terang" + #f6f6f4) — jadi acuan gate ini tetap valid', () => {
   assert.match(indexHtml, /data-t="modern"/);
   const modern = extractModernBlock(stylesCss);
-  assert.match(modern, /--bg:#fafafa;/);
-  assert.match(modern, /--accent:#2f6fed;/);
+  assert.match(modern, /--bg:#f6f6f4;/);
+  assert.match(modern, /--accent:#3a68cc;/);
 });
 
 test('modern-ui-layer.css — Modern tetap mendapat scoping fix kontras onlight', () => {
@@ -57,7 +57,7 @@ test('modern-ui-layer.css — Modern tetap mendapat scoping fix kontras onlight'
 });
 
 test('S2517 — Modern tetap canonical dan duplicate theme tokens retired', () => {
-  assert.match(stylesCss, /\[data-theme=\"modern\"\] \{[^}]*--bg:#fafafa;/);
+  assert.match(stylesCss, /\[data-theme=\"modern\"\] \{[^}]*--bg:#f6f6f4;/);
   for (const theme of ['ocean','stone','slate','mono','sand','ink','sage','fresh','minimal']) {
     assert.doesNotMatch(stylesCss, new RegExp(`\\[data-theme=\"${theme}\"\\]\\s*\\{`));
   }

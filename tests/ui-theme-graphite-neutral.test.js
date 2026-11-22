@@ -16,9 +16,9 @@ function graphiteBlock() {
 
 test('Graphite — palette dasar gelap dan netral abu-abu', () => {
   const b = graphiteBlock();
-  assert.match(b, /--bg:#111315/);
-  assert.match(b, /--surface2:#1d2024/);
-  assert.match(b, /--accent:#d1d5da/);
+  assert.match(b, /--bg:#1a1c1f/);
+  assert.match(b, /--surface2:#272a2f/);
+  assert.match(b, /--accent:#cfd3d8/);
   assert.match(b, /--accent3:#b8bdc3/);
   assert.match(b, /--accent3:#b8bdc3/);
   assert.match(b, /--money-pos:#b8bdc3/);

@@ -36,6 +36,6 @@ test('S2769: --text2 Modern >=4.5:1 di atas surface2 dan surface3', () => {
   const cr = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
   const m = block.match(/body\[data-theme="modern"\]\{--text2:(#[0-9a-f]{6})\}/);
   assert.ok(m, 'override --text2 Modern ada');
-  assert.ok(cr(m[1], '#e8e8e8') >= 4.5);
-  assert.ok(cr(m[1], '#f2f2f2') >= 4.5);
+  assert.ok(cr(m[1], '#e8e8e5') >= 4.5);
+  assert.ok(cr(m[1], '#f1f1ef') >= 4.5);
 });

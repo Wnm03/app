@@ -51,8 +51,8 @@ test('B8: restore menginvalidasi cache saldo akun', () => {
 });
 
 test('B7: token tema terang/modern berkontras lebih tinggi', () => {
-  assert.match(css, /\[data-theme="light"\][^\n]*--accent:#4f46e5/);
-  assert.match(css, /\[data-theme="light"\][^\n]*--accent3:#047857/);
-  assert.match(css, /\[data-theme="light"\][^\n]*--accent4:#b45309/);
+  assert.match(css, /\[data-theme="light"\][^\n]*--accent:#5b53d1/);
+  assert.match(css, /\[data-theme="light"\][^\n]*--accent3:#1f7a5c/);
+  assert.match(css, /\[data-theme="light"\][^\n]*--accent4:#9a5a22/);
   assert.ok(Buffer.byteLength(css) <= 180000);
 });

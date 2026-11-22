@@ -29,7 +29,7 @@ test('S2770: --pin-error lolos 4.5:1 di atas --bg tiap tema', () => {
   const cr = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
   const css = read('tokens.css');
   const val = (t) => css.match(new RegExp('body\\[data-theme="' + t + '"\\][^{]*\\{--pin-error:(#[0-9a-f]{6})'))[1];
-  for (const [t, bg] of [['dark', '#08090c'], ['graphite', '#111315'], ['light', '#f5f5fa'], ['modern', '#fafafa']]) {
+  for (const [t, bg] of [['dark', '#14161b'], ['graphite', '#1a1c1f'], ['light', '#f4f3f8'], ['modern', '#f6f6f4']]) {
     assert.ok(cr(val(t), bg) >= 4.5, t);
   }
 });

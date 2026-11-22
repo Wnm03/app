@@ -11,7 +11,7 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-11-22T07:42:19.312Z
+Terakhir digenerate: 2026-11-22T08:36:57.805Z
 Total file source: 486 · Total identifier global: 18804
 
 ## 1. Urutan load & ringkasan tiap file
@@ -234,7 +234,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 211 | `sheets-sync.js` | 272 | Integrasi Google Sheets: koneksi OAuth, sinkronisasi push/pull data D.* ke/dari Google Spreadsheet. Dipisah dari features-sheets-pwa-selftest.js (Sesi 2 restrukturisasi folder, blok 1/5 — lihat … |
 | 212 | `pwa-setup.js` | 76 | Setup PWA: registrasi manifest (via Blob kalau tidak di-hosting https) & service worker (sw.js, fallback inline Blob). Dipisah dari features-sheets-pwa-selftest.js (Sesi 2 restrukturisasi folder, blok 2/5 — lihat … |
 | 213 | `modules/shared/app-init-runtime.js` | 90 | App bootstrap runtime extracted from self-test.js. Kept separate so diagnostic tests do not own the application bootstrap. S1763: lifecycle/interval installation is explicitly idempotent. `init()` can be reached again … |
-| 214 | `modules/shared/self-test-cases-a.js` | 866 | Self-test case registry part A. |
+| 214 | `modules/shared/self-test-cases-a.js` | 869 | Self-test case registry part A. |
 | 215 | `modules/shared/self-test-cases-b.js` | 825 | Self-test case registry part B. |
 | 216 | `self-test.js` | 1010 | CATATAN (Sesi 297): file ini adalah runtime app (bukan file test Node), tapi namanya cocok pola default `node --test` (*-test.js) sehingga bisa ke-load & "gagal" kalau `node --test` dijalankan TANPA argumen di root. … |
 | 217 | `pajak-aset-ui-wrappers.js` | 226 | Wrapper UI tipis: parser angka (parsePzNum/parseDecStr/ normalizeOcrNumber), ganti tab pajak/zakat (setPajakTab/setPjkTab/savePajakSettings), dan delegasi tipis ke modul … |
@@ -15145,6 +15145,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `saldoCls` | `modules/shared/modules-render.js` |
 | `saldoEl` | `modules/shared/modules-calc.js` |
 | `saldoEl` | `modules/dashboard-hub/dashboard-hub.js` |
+| `saldoExpected` | `modules/shared/self-test-cases-a.js` |
 | `saldoFisik` | `modules/finance/tx-list-cashflow.js` |
 | `saldoFisikSekarang` | `modules/finance/cash-projection.js` |
 | `saldoHtml` | `modules/shared/modules-render.js` |
@@ -18180,7 +18181,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `utangMacet` | `modules/self-reward/self-reward-engine.js` |
 | `utangManual` | `modules/finance/pajak-pbb-zakat.js` |
 | `utangManual` | `modules/asset/aset-keluarga.js` |
-| `utangManual` | `modules/shared/self-test-cases-a.js` |
 | `utangNonSelf` | `modules/finance/dana-kelolaan.js` |
 | `utcA` | `modules/vehicle/sparepart-servis.js` |
 | `utcB` | `modules/vehicle/sparepart-servis.js` |
