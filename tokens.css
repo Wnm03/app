@@ -144,8 +144,8 @@ html body[data-theme] .card{padding:calc(var(--card-pad) + var(--card-pad-up));b
 html body[data-theme] .card:not(.stg-group-body-inner .card){margin-bottom:calc(var(--space-3) * var(--density))}
 /* font angka uang dari satu token (sebelumnya: rule monospace terpisah per tema di styles.css dan modern-ui-layer.css) */
 html body[data-theme] :is(.stat-val,.tx-amount,.shop-price-final,.shop-price-strike,.ldr-days,.money,.card-val){font-family:var(--font-num)}
-/* kontras: --text2 Modern hanya 4.35:1 di atas --surface3 (chip/tombol sekunder); #686868 = 4.55:1 (surface3), 4.98:1 (surface2) */
-html body[data-theme="modern"]{--text2:#686868}
+/* kontras: --text2 Modern hanya 4.35:1 di atas --surface3 (chip/tombol sekunder); #62625f = 4.98:1 (surface3 #e8e8e5), 5.41:1 (surface2) — palet soft */
+html body[data-theme="modern"]{--text2:#62625f}
 
 /* FASE 5C (S2770) — layar kunci PIN: token tema, umpan balik salah-PIN, kontras pesan. Tanpa pemaksaan prioritas. */
 html body[data-theme="dark"],html body[data-theme="graphite"]{--pin-error:#f87171}
